@@ -13,8 +13,9 @@ Switch between **Claude Opus 5.5 / Fable 5.1 / Sonnet 5.5 / Haiku 5.5**, **Gemin
 ## Highlights
 
 - **Native `/model`, `/effort` & `Ultracode`**: Full `low`, `medium`, `high`, `xhigh`, `max` + `ultracode` / `ultrathink` support on native Claude (`Opus 5.5`, `Sonnet 5.5`, `Haiku 5.5`, `Fable 5.1`), and `low`, `medium`, `high` (`maxEffortLevel: high`) on **Gemini 4 Argon**, **DeepSeek V4.1 Flash 1017**, and **Kimi K3** matching their upstream API specifications.
+- **Native `/workflows`, `Agent` Subagents & `/compact` on Custom Models**: Injects the QuickJS `Workflow` DSL specification, adapts `StructuredOutput` forced `tool_choice` and multi-turn `reasoning_content` for OpenAI/Antigravity upstreams, preserves active-model subagent inheritance (`Explore` / `Plan` / `general-purpose`), and ensures accurate token accounting for `/compact` and `autocompact`.
 - **Visible `Thought (∴)` Streaming**: Translates reasoning blocks (`thinking_delta`) and thinking budgets across Anthropic, OpenAI-compatible, and Google Antigravity (`agy`) endpoints.
-- **Priority OAuth Failover Pool**: Routes `DeepSeek V4.1 Flash 1017` and `Kimi K3` through `Cline` -> `CodeBuddy Intl` -> `KiloCode` with automatic fallback on rate limits.
+- **Priority OAuth Failover Pool**: Routes `DeepSeek V4.1 Flash 1017` and `Kimi K3` through `Cline` -> `CodeBuddy Intl` -> `KiloCode` with round-robin concurrency queueing and automatic fallback on rate limits.
 - **Dual Quota Statusline & `/usage`**: Real-time `5h` and `7d` quota tracking for both Anthropic OAuth and Google Antigravity (`AGY 5x`) in the bottom bar and `/usage`.
 - **1M Context + 1h Prompt Cache**: Full `1M` context window unlocked with `ENABLE_PROMPT_CACHING_1H` enabled by default.
 - **Project-Scoped Memory Hooks**: Snapshots active task state before compaction (`PreCompact`) and on exit (`Stop`) inside `~/.claude/projects/<slug>/memory`. Starts 100% clean in `$HOME`.

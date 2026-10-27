@@ -16,6 +16,28 @@ function updateUltraState(mode) {
   } catch {}
 }
 
+const WORKFLOW_QUICK_GUIDE = [
+  'ULTRACODE MODE ENABLED: Optimize for the most exhaustive, rigorous, and verified engineering solution.',
+  'When orchestrating multi-step or parallel work with the Workflow tool, pass plain JavaScript inline via `script` (never TypeScript, never Date.now()/Math.random()/new Date()).',
+  'Every Workflow script MUST start with a pure literal `export const meta = { name, description, phases }` and pass zero-arg thunks `() => agent(...)` to `parallel(...)`:',
+  '```js',
+  'export const meta = {',
+  '  name: "deep-task",',
+  '  description: "Parallel analysis and verification",',
+  '  phases: [{ title: "Analyze" }, { title: "Verify" }]',
+  '};',
+  'phase("Analyze");',
+  'const parts = await parallel([',
+  '  () => agent("Analyze module A in detail", { label: "analyze:A", phase: "Analyze" }),',
+  '  () => agent("Analyze module B in detail", { label: "analyze:B", phase: "Analyze" })',
+  ']);',
+  'phase("Verify");',
+  'const verified = await agent("Cross-check findings: " + JSON.stringify(parts.filter(Boolean)), { label: "verify:all", phase: "Verify" });',
+  'return { parts: parts.filter(Boolean), verified };',
+  '```',
+  'Keep workflow fan-out focused (2 to 4 subagents) and never pass `model` or `effort` inside `agent()` options so subagents inherit the active session model.'
+].join('\n');
+
 let raw = '';
 process.stdin.setEncoding('utf8');
 process.stdin.on('data', chunk => { raw += chunk; });
@@ -45,10 +67,10 @@ process.stdin.on('end', () => {
       const mode = hasUltracode ? 'ultracode' : 'ultrathink';
       updateUltraState(mode);
       const banner = hasUltracode
-        ? '⚡ Ultracode active · Exhaustive multi-step verification & maximum reasoning enabled for this turn'
+        ? '⚡ Ultracode active · Multi-agent Workflow orchestration & exhaustive verification enabled'
         : '✦ Ultrathink active · Maximum deep reasoning enabled for this turn';
       const directive = hasUltracode
-        ? 'ULTRACODE MODE ENABLED: Optimize for the most exhaustive, rigorous, and complete engineering solution — not the fastest or shortest. Verify every assumption, edge case, and cross-file dependency before finalizing.'
+        ? WORKFLOW_QUICK_GUIDE
         : 'ULTRATHINK MODE ENABLED: Perform deep, exhaustive step-by-step reasoning before acting.';
 
       process.stdout.write(JSON.stringify({

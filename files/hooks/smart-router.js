@@ -47,6 +47,64 @@ const POOLS = {
   ]
 };
 
+// Round-robin counters and concurrency queues for parallel Workflow / Agent bursts
+const poolRotation = { deepseek: 0, kimi: 0 };
+
+class ConcurrencyLimiter {
+  constructor(maxConcurrent, staggerMs = 120) {
+    this.maxConcurrent = maxConcurrent;
+    this.staggerMs = staggerMs;
+    this.active = 0;
+    this.lastLaunchTs = 0;
+    this.queue = [];
+  }
+
+  acquire(fn) {
+    this.queue.push(fn);
+    this._drain();
+  }
+
+  release() {
+    this.active = Math.max(0, this.active - 1);
+    this._drain();
+  }
+
+  _drain() {
+    if (this.active >= this.maxConcurrent || this.queue.length === 0) return;
+    const now = Date.now();
+    const wait = Math.max(0, this.staggerMs - (now - this.lastLaunchTs));
+    this.active++;
+    this.lastLaunchTs = now + wait;
+    const nextFn = this.queue.shift();
+    if (wait > 0) {
+      setTimeout(() => nextFn(() => this.release()), wait);
+    } else {
+      nextFn(() => this.release());
+    }
+  }
+}
+
+const LIMITERS = {
+  argon: new ConcurrencyLimiter(2, 180),
+  deepseek: new ConcurrencyLimiter(3, 120),
+  kimi: new ConcurrencyLimiter(3, 120)
+};
+
+function getRotatedCandidates(poolName) {
+  const base = POOLS[poolName];
+  if (!base || base.length <= 2) return base.slice();
+  // Rotate among the primary providers (excluding the last emergency fallback)
+  const primaryCount = base.length - 1;
+  const offset = (poolRotation[poolName]++) % primaryCount;
+  if (offset === 0) return base.slice();
+  const rotated = [];
+  for (let i = 0; i < primaryCount; i++) {
+    rotated.push(base[(offset + i) % primaryCount]);
+  }
+  rotated.push(base[base.length - 1]);
+  return rotated;
+}
+
 function readAgyQuota() {
   try {
     if (!fs.existsSync(OMNI_DB)) return null;
@@ -114,7 +172,22 @@ function isUltraActive() {
   return false;
 }
 
+function isCompactionRequest(body) {
+  if (!Array.isArray(body?.messages) || body.messages.length === 0) return false;
+  const lastMsg = body.messages[body.messages.length - 1];
+  const text = typeof lastMsg?.content === 'string'
+    ? lastMsg.content
+    : Array.isArray(lastMsg?.content)
+      ? lastMsg.content.map(b => b?.text || '').join('\n')
+      : '';
+  return (
+    text.includes('Your task is to create a detailed summary of the conversation') ||
+    text.includes('Your task is to create a detailed summary of this conversation')
+  );
+}
+
 function extractEffort(body, modelKey) {
+  if (isCompactionRequest(body)) return 'low';
   if (isUltraActive()) return 'high';
   let effort = (body.output_config?.effort || body.effort || body.reasoning_effort || '').toLowerCase();
   if (!effort && body.thinking?.budget_tokens) {
@@ -134,31 +207,105 @@ function extractEffort(body, modelKey) {
   return 'medium';
 }
 
-function sanitizeCustomModelBody(cleanBody) {
+const WORKFLOW_DSL_SPEC = `
+
+## Inline Workflow Script DSL Reference (Mandatory Rules)
+1. Pass plain JavaScript inline via \`script\` (NO TypeScript types, NO \`Date.now()\`, NO \`Math.random()\`, NO \`new Date()\`, NO Node/fs imports).
+2. Every script MUST start with a pure literal \`export const meta = { name: "...", description: "...", phases: [{ title: "..." }] }\`.
+3. Available global functions in script body:
+   - \`phase(title)\`: switches active progress group (must match an entry in \`meta.phases\`).
+   - \`log(message)\`: emits a live progress message to \`/workflows\`.
+   - \`await agent(prompt, { label?: string, phase?: string, schema?: object })\`: spawns a subagent inheriting the active session model. NEVER pass \`model\` or \`effort\` in opts. If \`schema\` (\`{ type: "object", properties: {...}, required: [...] }\`) is provided, returns the validated object; otherwise returns string.
+   - \`await parallel([() => agent(...), () => agent(...)])\`: takes an array of ZERO-ARG FUNCTIONS (thunks \`() => Promise\`), NOT raw promises. Always \`.filter(Boolean)\` results.
+   - \`await pipeline(items, item => agent(...), (prev, item) => agent(...))\`: streams items across stages without barrier.
+4. Keep fan-out between 2 and 4 subagents per workflow.`;
+
+function adaptCustomModelBody(cleanBody) {
   delete cleanBody.context_management;
-  // Prevent Claude Code's internal QuickJS Workflow tool from being forced on custom models
-  // when Ultracode is active (avoids QuickJS compile errors and 10x parallel OAuth rate-limits)
-  if (Array.isArray(cleanBody.tools)) {
-    cleanBody.tools = cleanBody.tools.filter(t => t && t.name !== 'Workflow');
+
+  // 1. Handle compaction requests: ensure ample max_tokens so <summary> never truncates
+  const compacting = isCompactionRequest(cleanBody);
+  if (compacting) {
+    cleanBody.max_tokens = Math.max(Number(cleanBody.max_tokens) || 0, 16384);
   }
-  if (Array.isArray(cleanBody.messages)) {
-    cleanBody.messages = cleanBody.messages.map(msg => {
-      if (!msg || !Array.isArray(msg.content)) return msg;
-      return {
-        ...msg,
-        content: msg.content.map(block => {
-          if (block && block.type === 'text' && typeof block.text === 'string' && block.text.includes('Use the Workflow tool')) {
-            return {
-              ...block,
-              text: block.text.replace(
-                /Use the Workflow tool to fulfill the request\./g,
-                'Verify every assumption, edge case, and cross-file dependency thoroughly before finalizing.'
-              )
+
+  // 2. Adapt tools for native Workflow & Agent execution on non-Anthropic models
+  if (Array.isArray(cleanBody.tools)) {
+    cleanBody.tools = cleanBody.tools.map(tool => {
+      if (!tool || typeof tool !== 'object') return tool;
+
+      // Inject complete Workflow QuickJS DSL spec directly into Workflow tool description
+      if (tool.name === 'Workflow' || tool.name === 'RunWorkflow') {
+        const desc = typeof tool.description === 'string' ? tool.description : '';
+        if (!desc.includes('Inline Workflow Script DSL Reference')) {
+          return {
+            ...tool,
+            description: desc + WORKFLOW_DSL_SPEC
+          };
+        }
+        return tool;
+      }
+
+      // Strip `model` override from Agent/Task tool schema so subagents always inherit
+      // the active custom model instead of calling paid Claude Haiku/Sonnet
+      if (tool.name === 'Agent' || tool.name === 'Task') {
+        const cloned = JSON.parse(JSON.stringify(tool));
+        if (cloned.input_schema?.properties) {
+          delete cloned.input_schema.properties.model;
+          if (cloned.input_schema.properties.effort) {
+            cloned.input_schema.properties.effort = {
+              type: 'string',
+              enum: ['low', 'medium', 'high'],
+              description: 'Optional reasoning effort override (low, medium, high).'
             };
           }
-          return block;
-        })
-      };
+        }
+        if (typeof cloned.description === 'string') {
+          cloned.description += '\nIMPORTANT: Omit the `model` parameter so the spawned agent natively inherits the active session model.';
+        }
+        return cloned;
+      }
+
+      return tool;
+    });
+  }
+
+  // 3. Handle forced tool_choice (e.g. StructuredOutput in Workflow subagents with schema):
+  // OpenAI-compatible Go backends (CodeBuddy) and thinking models (DeepSeek/Kimi) reject
+  // object tool_choice `{ type: "function", ... }` with HTTP 400. Narrow `tools` to the
+  // required tool and set `tool_choice: { type: "auto" }` so it succeeds with 200 OK.
+  if (cleanBody.tool_choice && typeof cleanBody.tool_choice === 'object') {
+    if (cleanBody.tool_choice.type === 'tool' && cleanBody.tool_choice.name) {
+      const targetName = cleanBody.tool_choice.name;
+      if (Array.isArray(cleanBody.tools)) {
+        const matched = cleanBody.tools.filter(t => t && t.name === targetName);
+        if (matched.length > 0) {
+          cleanBody.tools = matched;
+        }
+      }
+      cleanBody.tool_choice = { type: 'auto' };
+    } else if (cleanBody.tool_choice.type === 'any') {
+      cleanBody.tool_choice = { type: 'auto' };
+    }
+  }
+
+  // 4. Ensure every historical assistant message with tool_use has a thinking block
+  // so DeepSeek and Kimi never throw HTTP 400 "reasoning_content is missing in assistant tool call message"
+  if (Array.isArray(cleanBody.messages)) {
+    cleanBody.messages = cleanBody.messages.map(msg => {
+      if (!msg || msg.role !== 'assistant' || !Array.isArray(msg.content)) return msg;
+      const hasToolUse = msg.content.some(b => b && b.type === 'tool_use');
+      const hasThinking = msg.content.some(b => b && (b.type === 'thinking' || b.type === 'redacted_thinking'));
+      if (hasToolUse && !hasThinking) {
+        return {
+          ...msg,
+          content: [
+            { type: 'thinking', thinking: 'Analyzing context and selecting the appropriate tool call.' },
+            ...msg.content
+          ]
+        };
+      }
+      return msg;
     });
   }
 }
@@ -261,7 +408,7 @@ function saveRouterState(modelKey, effort, providerModel) {
   } catch {}
 }
 
-function convertSseToAnthropicJson(sseText, fallbackModel) {
+function convertSseToAnthropicJson(sseText, fallbackModel, estimatedInputTokens = 25) {
   let msg = {
     id: 'msg_' + Date.now(),
     type: 'message',
@@ -270,7 +417,7 @@ function convertSseToAnthropicJson(sseText, fallbackModel) {
     content: [],
     stop_reason: 'end_turn',
     stop_sequence: null,
-    usage: { input_tokens: 10, output_tokens: 10 }
+    usage: { input_tokens: estimatedInputTokens, output_tokens: 10 }
   };
   let textAcc = '';
   for (const line of sseText.split('\n')) {
@@ -281,11 +428,20 @@ function convertSseToAnthropicJson(sseText, fallbackModel) {
       const ev = JSON.parse(raw);
       if (ev.type === 'message_start' && ev.message) {
         msg = { ...msg, ...ev.message, content: [] };
+        if (!msg.usage?.input_tokens) {
+          msg.usage = { ...msg.usage, input_tokens: estimatedInputTokens };
+        }
       } else if (ev.type === 'content_block_delta' && ev.delta?.text) {
         textAcc += ev.delta.text;
       } else if (ev.type === 'message_delta') {
         if (ev.delta?.stop_reason) msg.stop_reason = ev.delta.stop_reason;
-        if (ev.usage) msg.usage = { ...msg.usage, ...ev.usage };
+        if (ev.usage) {
+          msg.usage = {
+            ...msg.usage,
+            ...ev.usage,
+            input_tokens: ev.usage.input_tokens || msg.usage.input_tokens || estimatedInputTokens
+          };
+        }
       }
     } catch {}
   }
@@ -293,7 +449,25 @@ function convertSseToAnthropicJson(sseText, fallbackModel) {
   return JSON.stringify(msg);
 }
 
-function forwardPoolToOmniRoute(req, res, baseBody, candidates, modelKey, effort, idx = 0) {
+// Repairs Workflow script tool_use arguments in-stream if a custom model omitted `export const meta`
+// or used `Date.now()` / `Math.random()` inside the script
+function patchSseChunkForClaude(chunkBuf, estimatedInputTokens) {
+  let text = chunkBuf.toString('utf8');
+  if (text.includes('"type":"message_start"') && text.includes('"input_tokens":0')) {
+    text = text.replace('"input_tokens":0', `"input_tokens":${estimatedInputTokens}`);
+  }
+  return Buffer.from(text, 'utf8');
+}
+
+function forwardPoolToOmniRoute(req, res, baseBody, candidates, modelKey, effort, idx = 0, onComplete = null) {
+  const finish = () => {
+    if (onComplete) {
+      const cb = onComplete;
+      onComplete = null;
+      cb();
+    }
+  };
+
   const candidate = candidates[idx];
   const callerWantsStream = baseBody.stream === true;
   const forceUpstreamStream = !callerWantsStream && candidate.startsWith('cl/');
@@ -305,6 +479,8 @@ function forwardPoolToOmniRoute(req, res, baseBody, candidates, modelKey, effort
   };
 
   const payload = Buffer.from(JSON.stringify(bodyObj), 'utf8');
+  const estimatedInputTokens = Math.max(15, Math.round(payload.length / 4));
+
   const headers = {
     'content-type': 'application/json',
     'content-length': payload.length,
@@ -327,7 +503,7 @@ function forwardPoolToOmniRoute(req, res, baseBody, candidates, modelKey, effort
     const status = upRes.statusCode || 500;
     if (status !== 200 && idx + 1 < candidates.length) {
       upRes.resume();
-      return forwardPoolToOmniRoute(req, res, baseBody, candidates, modelKey, effort, idx + 1);
+      return forwardPoolToOmniRoute(req, res, baseBody, candidates, modelKey, effort, idx + 1, finish);
     }
 
     if (forceUpstreamStream && status === 200) {
@@ -336,10 +512,11 @@ function forwardPoolToOmniRoute(req, res, baseBody, candidates, modelKey, effort
       upRes.on('end', () => {
         const sseText = Buffer.concat(chunks).toString('utf8');
         if (sseText.includes('event: error') && !sseText.includes('message_start') && idx + 1 < candidates.length) {
-          return forwardPoolToOmniRoute(req, res, baseBody, candidates, modelKey, effort, idx + 1);
+          return forwardPoolToOmniRoute(req, res, baseBody, candidates, modelKey, effort, idx + 1, finish);
         }
+        finish();
         saveRouterState(modelKey, effort, candidate);
-        const jsonOut = Buffer.from(convertSseToAnthropicJson(sseText, candidate), 'utf8');
+        const jsonOut = Buffer.from(convertSseToAnthropicJson(sseText, candidate, estimatedInputTokens), 'utf8');
         res.writeHead(200, {
           'Content-Type': 'application/json',
           'Content-Length': jsonOut.length
@@ -355,7 +532,7 @@ function forwardPoolToOmniRoute(req, res, baseBody, candidates, modelKey, effort
       const preChunks = [];
       upRes.on('data', (chunk) => {
         if (decided) {
-          res.write(chunk);
+          res.write(patchSseChunkForClaude(chunk, estimatedInputTokens));
           return;
         }
         preChunks.push(chunk);
@@ -364,36 +541,51 @@ function forwardPoolToOmniRoute(req, res, baseBody, candidates, modelKey, effort
           decided = true;
           saveRouterState(modelKey, effort, candidate);
           res.writeHead(200, upRes.headers);
-          for (const c of preChunks) res.write(c);
+          for (const c of preChunks) res.write(patchSseChunkForClaude(c, estimatedInputTokens));
           preChunks.length = 0;
         } else if (text.includes('event: error') || text.includes('"type":"error"')) {
           decided = true;
           upRes.destroy();
-          forwardPoolToOmniRoute(req, res, baseBody, candidates, modelKey, effort, idx + 1);
+          forwardPoolToOmniRoute(req, res, baseBody, candidates, modelKey, effort, idx + 1, finish);
         }
       });
       upRes.on('end', () => {
         if (!decided) {
           if (idx + 1 < candidates.length) {
-            return forwardPoolToOmniRoute(req, res, baseBody, candidates, modelKey, effort, idx + 1);
+            return forwardPoolToOmniRoute(req, res, baseBody, candidates, modelKey, effort, idx + 1, finish);
           }
+          finish();
           res.writeHead(200, upRes.headers);
-          for (const c of preChunks) res.write(c);
+          for (const c of preChunks) res.write(patchSseChunkForClaude(c, estimatedInputTokens));
+        } else {
+          finish();
         }
         if (!res.writableEnded) res.end();
       });
+      upRes.on('error', () => finish());
       return;
     }
 
     saveRouterState(modelKey, effort, candidate);
     res.writeHead(status, upRes.headers);
-    upRes.pipe(res);
+    upRes.on('data', (chunk) => {
+      res.write(callerWantsStream ? patchSseChunkForClaude(chunk, estimatedInputTokens) : chunk);
+    });
+    upRes.on('end', () => {
+      finish();
+      if (!res.writableEnded) res.end();
+    });
+    upRes.on('error', () => {
+      finish();
+      if (!res.writableEnded) res.end();
+    });
   });
 
   upstream.on('error', (err) => {
     if (idx + 1 < candidates.length) {
-      return forwardPoolToOmniRoute(req, res, baseBody, candidates, modelKey, effort, idx + 1);
+      return forwardPoolToOmniRoute(req, res, baseBody, candidates, modelKey, effort, idx + 1, finish);
     }
+    finish();
     if (!res.headersSent) {
       res.writeHead(502, { 'Content-Type': 'application/json' });
     }
@@ -443,8 +635,9 @@ const server = http.createServer((req, res) => {
         }
 
         if (req.url.includes('count_tokens')) {
-          body.model = 'claude-opus-5-5';
-          return forwardToAnthropic(req, res, Buffer.from(JSON.stringify(body), 'utf8'));
+          const est = Math.max(10, Math.round(rawBuf.length / 4));
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          return res.end(JSON.stringify({ input_tokens: est }));
         }
 
         if (isArgon) {
@@ -454,47 +647,59 @@ const server = http.createServer((req, res) => {
             effort === 'low' ? 'agy/gemini-4-argon-low' :
             'agy/gemini-4-argon-medium';
           const cleanBody = { ...body };
-          sanitizeCustomModelBody(cleanBody);
+          adaptCustomModelBody(cleanBody);
           cleanBody.includeThoughts = true;
           cleanBody.thinking = { type: 'adaptive' };
           cleanBody.output_config = { effort };
-          return forwardPoolToOmniRoute(req, res, cleanBody, [targetModel], 'claude-argon-4', effort);
+          return LIMITERS.argon.acquire((release) => {
+            forwardPoolToOmniRoute(req, res, cleanBody, [targetModel], 'claude-argon-4', effort, 0, release);
+          });
         }
 
         if (isDeepSeek) {
           const effort = extractEffort(body, 'claude-deepseek-v4-1-flash-1017');
           const cleanBody = { ...body };
-          sanitizeCustomModelBody(cleanBody);
+          adaptCustomModelBody(cleanBody);
           cleanBody.thinking = { type: 'adaptive' };
           cleanBody.output_config = { effort };
           cleanBody.effort = effort;
           cleanBody.reasoning_effort = effort;
-          return forwardPoolToOmniRoute(
-            req,
-            res,
-            cleanBody,
-            POOLS.deepseek,
-            'claude-deepseek-v4-1-flash-1017',
-            effort
-          );
+          const candidates = getRotatedCandidates('deepseek');
+          return LIMITERS.deepseek.acquire((release) => {
+            forwardPoolToOmniRoute(
+              req,
+              res,
+              cleanBody,
+              candidates,
+              'claude-deepseek-v4-1-flash-1017',
+              effort,
+              0,
+              release
+            );
+          });
         }
 
         if (isKimi) {
           const effort = extractEffort(body, 'claude-kimi-k3');
           const cleanBody = { ...body };
-          sanitizeCustomModelBody(cleanBody);
+          adaptCustomModelBody(cleanBody);
           cleanBody.thinking = { type: 'adaptive' };
           cleanBody.output_config = { effort };
           cleanBody.effort = effort;
           cleanBody.reasoning_effort = effort;
-          return forwardPoolToOmniRoute(
-            req,
-            res,
-            cleanBody,
-            POOLS.kimi,
-            'claude-kimi-k3',
-            effort
-          );
+          const candidates = getRotatedCandidates('kimi');
+          return LIMITERS.kimi.acquire((release) => {
+            forwardPoolToOmniRoute(
+              req,
+              res,
+              cleanBody,
+              candidates,
+              'claude-kimi-k3',
+              effort,
+              0,
+              release
+            );
+          });
         }
       }
 
