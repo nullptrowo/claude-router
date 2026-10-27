@@ -317,22 +317,22 @@ process.stdin.on('end', async () => {
     const parts = [modelBadge];
 
     if (isArgon && agy) {
-      const c7 = claude7d != null ? ` ${C.muted}Claude ${Math.round(Number(claude7d))}%${RST}` : '';
+      const c7 = claude7d != null ? ` ${C.dim}·${RST} ${C.coral}Claude${RST} ${pctColor(claude7d)}${Math.round(Number(claude7d))}%${RST}` : '';
+      const c5 = claude5h != null ? ` ${C.dim}·${RST} ${C.coral}Claude${RST} ${pctColor(claude5h)}${Math.round(Number(claude5h))}%${RST}` : '';
       const wTime = agy.sevenDayResetEpoch ? ` ${C.muted}${fmtTimeLeft(agy.sevenDayResetEpoch)}${RST}` : '';
       const fTime = agy.fiveHourResetEpoch ? ` ${C.muted}${fmtTimeLeft(agy.fiveHourResetEpoch)}${RST}` : '';
       parts.push(`${C.muted}7d${RST} ${makeGauge(agy.sevenDayUsed, 7)} ${pctColor(agy.sevenDayUsed)}${agy.sevenDayUsed.toFixed(0)}%${RST}${wTime}${c7}`);
-      parts.push(`${C.muted}5h${RST} ${makeGauge(agy.fiveHourUsed, 5)} ${pctColor(agy.fiveHourUsed)}${agy.fiveHourUsed.toFixed(0)}%${RST}${fTime}`);
+      parts.push(`${C.muted}5h${RST} ${makeGauge(agy.fiveHourUsed, 5)} ${pctColor(agy.fiveHourUsed)}${agy.fiveHourUsed.toFixed(0)}%${RST}${fTime}${c5}`);
     } else if (claude7d != null || claude5h != null) {
       if (claude7d != null) {
         const wTime = claude7dEpoch ? ` ${C.muted}${fmtTimeLeft(claude7dEpoch)}${RST}` : '';
-        const agyTag = agy
-          ? ` ${C.blue}AGY${RST} ${pctColor(agy.sevenDayUsed)}${agy.sevenDayUsed.toFixed(0)}%${RST}${C.dim}/${RST}${pctColor(agy.fiveHourUsed)}${agy.fiveHourUsed.toFixed(0)}%${RST}`
-          : '';
-        parts.push(`${C.muted}7d${RST} ${makeGauge(claude7d, 7)} ${pctColor(claude7d)}${Math.round(Number(claude7d))}%${RST}${wTime}${agyTag}`);
+        const agy7 = agy ? ` ${C.dim}·${RST} ${C.blue}AGY${RST} ${pctColor(agy.sevenDayUsed)}${agy.sevenDayUsed.toFixed(0)}%${RST}` : '';
+        parts.push(`${C.muted}7d${RST} ${makeGauge(claude7d, 7)} ${pctColor(claude7d)}${Math.round(Number(claude7d))}%${RST}${wTime}${agy7}`);
       }
       if (claude5h != null) {
         const fTime = claude5hEpoch ? ` ${C.muted}${fmtTimeLeft(claude5hEpoch)}${RST}` : '';
-        parts.push(`${C.muted}5h${RST} ${makeGauge(claude5h, 5)} ${pctColor(claude5h)}${Math.round(Number(claude5h))}%${RST}${fTime}`);
+        const agy5 = agy ? ` ${C.dim}·${RST} ${C.blue}AGY${RST} ${pctColor(agy.fiveHourUsed)}${agy.fiveHourUsed.toFixed(0)}%${RST}` : '';
+        parts.push(`${C.muted}5h${RST} ${makeGauge(claude5h, 5)} ${pctColor(claude5h)}${Math.round(Number(claude5h))}%${RST}${fTime}${agy5}`);
       }
     }
 

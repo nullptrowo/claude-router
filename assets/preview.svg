@@ -89,24 +89,24 @@
     <line x1="162" y1="567" x2="162" y2="583" stroke="#484f58" stroke-width="1.2"/>
 
     <!-- Segment 2: 7d Gauge (Continuous TrueColor Track) -->
-    <text x="174" y="579" fill="#8b949e">7d</text>
-    <rect x="195" y="573.5" width="48" height="3.2" rx="1.5" fill="#30363d"/>
-    <rect x="195" y="573.5" width="12" height="3.2" rx="1.5" fill="#3fb950"/>
-    <text x="251" y="579"><tspan fill="#3fb950" font-weight="600">15%</tspan><tspan fill="#8b949e"> 5d2h </tspan><tspan fill="#79c0ff" font-weight="600">AGY </tspan><tspan fill="#d29922" font-weight="600">71%</tspan><tspan fill="#484f58">/</tspan><tspan fill="#3fb950" font-weight="600">3%</tspan></text>
-    <line x1="422" y1="567" x2="422" y2="583" stroke="#484f58" stroke-width="1.2"/>
+    <text x="172" y="579" fill="#8b949e">7d</text>
+    <rect x="193" y="573.5" width="46" height="3.2" rx="1.5" fill="#30363d"/>
+    <rect x="193" y="573.5" width="11" height="3.2" rx="1.5" fill="#3fb950"/>
+    <text x="247" y="579"><tspan fill="#3fb950" font-weight="600">15%</tspan><tspan fill="#8b949e"> 5d2h </tspan><tspan fill="#484f58">· </tspan><tspan fill="#79c0ff" font-weight="600">AGY </tspan><tspan fill="#d29922" font-weight="600">71%</tspan></text>
+    <line x1="406" y1="567" x2="406" y2="583" stroke="#484f58" stroke-width="1.2"/>
 
     <!-- Segment 3: 5h Gauge (Continuous TrueColor Track) -->
-    <text x="434" y="579" fill="#8b949e">5h</text>
-    <rect x="455" y="573.5" width="34" height="3.2" rx="1.5" fill="#30363d"/>
-    <rect x="455" y="573.5" width="5" height="3.2" rx="1.5" fill="#3fb950"/>
-    <text x="497" y="579"><tspan fill="#3fb950" font-weight="600">1%</tspan><tspan fill="#8b949e"> 3h20m</tspan></text>
-    <line x1="566" y1="567" x2="566" y2="583" stroke="#484f58" stroke-width="1.2"/>
+    <text x="416" y="579" fill="#8b949e">5h</text>
+    <rect x="437" y="573.5" width="32" height="3.2" rx="1.5" fill="#30363d"/>
+    <rect x="437" y="573.5" width="5" height="3.2" rx="1.5" fill="#3fb950"/>
+    <text x="477" y="579"><tspan fill="#3fb950" font-weight="600">1%</tspan><tspan fill="#8b949e"> 3h20m </tspan><tspan fill="#484f58">· </tspan><tspan fill="#79c0ff" font-weight="600">AGY </tspan><tspan fill="#3fb950" font-weight="600">3%</tspan></text>
+    <line x1="628" y1="567" x2="628" y2="583" stroke="#484f58" stroke-width="1.2"/>
 
     <!-- Segment 4: Prompt Cache Hit & TTL -->
-    <text x="578" y="579"><tspan fill="#8b949e">cache </tspan><tspan fill="#3fb950" font-weight="600">98.3%</tspan><tspan fill="#8b949e"> ttl </tspan><tspan fill="#3fb950" font-weight="600">60m</tspan><tspan fill="#8b949e"> cr:80.0M out:483.1k</tspan></text>
-    <line x1="836" y1="567" x2="836" y2="583" stroke="#484f58" stroke-width="1.2"/>
+    <text x="638" y="579"><tspan fill="#8b949e">cache </tspan><tspan fill="#3fb950" font-weight="600">98.3%</tspan><tspan fill="#8b949e"> ttl </tspan><tspan fill="#3fb950" font-weight="600">60m</tspan></text>
+    <line x1="786" y1="567" x2="786" y2="583" stroke="#484f58" stroke-width="1.2"/>
 
     <!-- Segment 5: Context & Turns -->
-    <text x="846" y="579"><tspan fill="#8b949e">ctx </tspan><tspan fill="#d2a8ff" font-weight="600">127.3k (13%)</tspan></text>
+    <text x="796" y="579"><tspan fill="#8b949e">ctx </tspan><tspan fill="#d2a8ff" font-weight="600">127.3k (13%)</tspan><tspan fill="#8b949e"> 12t</tspan></text>
   </g>
 </svg>
