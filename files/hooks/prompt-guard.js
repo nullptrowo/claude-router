@@ -1,8 +1,48 @@
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
+const net = require('net');
+const { spawn } = require('child_process');
 
-const STATE_FILE = path.join(os.homedir(), '.claude', 'argon-state.json');
+const CLAUDE_DIR = path.join(os.homedir(), '.claude');
+const STATE_FILE = path.join(CLAUDE_DIR, 'argon-state.json');
+const SMART_ROUTER_SCRIPT = path.join(CLAUDE_DIR, 'hooks', 'smart-router.js');
+
+function checkPort(port, timeout = 250) {
+  return new Promise((resolve) => {
+    const sock = new net.Socket();
+    let done = false;
+    const finish = (ok) => {
+      if (done) return;
+      done = true;
+      sock.destroy();
+      resolve(ok);
+    };
+    sock.setTimeout(timeout);
+    sock.once('connect', () => finish(true));
+    sock.once('timeout', () => finish(false));
+    sock.once('error', () => finish(false));
+    sock.connect(port, '127.0.0.1');
+  });
+}
+
+async function ensureRouterAlive() {
+  if (await checkPort(20129)) return;
+  try {
+    if (fs.existsSync(SMART_ROUTER_SCRIPT)) {
+      const child = spawn(process.execPath, [SMART_ROUTER_SCRIPT], {
+        detached: true,
+        stdio: 'ignore',
+        windowsHide: true
+      });
+      child.unref();
+      for (let i = 0; i < 8; i++) {
+        await new Promise(r => setTimeout(r, 150));
+        if (await checkPort(20129)) break;
+      }
+    }
+  } catch {}
+}
 
 function updateUltraState(mode) {
   try {
@@ -41,8 +81,10 @@ const WORKFLOW_QUICK_GUIDE = [
 let raw = '';
 process.stdin.setEncoding('utf8');
 process.stdin.on('data', chunk => { raw += chunk; });
-process.stdin.on('end', () => {
+process.stdin.on('end', async () => {
   try {
+    await ensureRouterAlive();
+
     const data = JSON.parse(raw || '{}');
     const tp = data.transcript_path;
     const prompt = (data.prompt || '').trim();

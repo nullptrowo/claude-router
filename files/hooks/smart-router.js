@@ -4,6 +4,14 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 
+// Never allow an unexpected stream/socket error to crash the router daemon
+process.on('uncaughtException', (err) => {
+  try { console.error('[smart-router uncaughtException]', err?.message || err); } catch {}
+});
+process.on('unhandledRejection', (err) => {
+  try { console.error('[smart-router unhandledRejection]', err?.message || err); } catch {}
+});
+
 const HOME = os.homedir();
 const CLAUDE_DIR = path.join(HOME, '.claude');
 const PORT = 20129;
@@ -93,7 +101,6 @@ const LIMITERS = {
 function getRotatedCandidates(poolName) {
   const base = POOLS[poolName];
   if (!base || base.length <= 2) return base.slice();
-  // Rotate among the primary providers (excluding the last emergency fallback)
   const primaryCount = base.length - 1;
   const offset = (poolRotation[poolName]++) % primaryCount;
   if (offset === 0) return base.slice();
@@ -220,7 +227,7 @@ const WORKFLOW_DSL_SPEC = `
    - \`await pipeline(items, item => agent(...), (prev, item) => agent(...))\`: streams items across stages without barrier.
 4. Keep fan-out between 2 and 4 subagents per workflow.`;
 
-function adaptCustomModelBody(cleanBody) {
+function adaptCustomModelBody(cleanBody, isOpenAiPool = false) {
   delete cleanBody.context_management;
 
   // 1. Handle compaction requests: ensure ample max_tokens so <summary> never truncates
@@ -231,7 +238,14 @@ function adaptCustomModelBody(cleanBody) {
 
   // 2. Adapt tools for native Workflow & Agent execution on non-Anthropic models
   if (Array.isArray(cleanBody.tools)) {
-    cleanBody.tools = cleanBody.tools.map(tool => {
+    // On OpenAI pools (DeepSeek/Kimi), drop Anthropic's server-only `web_search_20250305` stub
+    // when mixed with regular tools (matching claude-to-gemini.ts) so subagents use WebFetch/Bash/Read
+    // instead of calling a broken schema-less `web_search` function.
+    const rawTools = isOpenAiPool && cleanBody.tools.length > 1
+      ? cleanBody.tools.filter(t => !(t && typeof t.type === 'string' && t.type.startsWith('web_search')))
+      : cleanBody.tools;
+
+    cleanBody.tools = rawTools.map(tool => {
       if (!tool || typeof tool !== 'object') return tool;
 
       // Inject complete Workflow QuickJS DSL spec directly into Workflow tool description
@@ -355,17 +369,18 @@ function forwardToAnthropic(req, res, bodyBuf) {
             const outHeaders = { ...upRes.headers, 'content-length': outBuf.length };
             delete outHeaders['content-encoding'];
             delete outHeaders['transfer-encoding'];
-            res.writeHead(200, outHeaders);
-            return res.end(outBuf);
+            if (!res.headersSent) res.writeHead(200, outHeaders);
+            if (!res.writableEnded) res.end(outBuf);
+            return;
           } catch {}
         }
-        res.writeHead(upRes.statusCode || 200, upRes.headers);
-        res.end(raw);
+        if (!res.headersSent) res.writeHead(upRes.statusCode || 200, upRes.headers);
+        if (!res.writableEnded) res.end(raw);
       });
     });
     upstream.on('error', (err) => {
       if (!res.headersSent) res.writeHead(502, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify({ error: { type: 'api_error', message: err.message } }));
+      if (!res.writableEnded) res.end(JSON.stringify({ error: { type: 'api_error', message: err.message } }));
     });
     return upstream.end();
   }
@@ -377,7 +392,7 @@ function forwardToAnthropic(req, res, bodyBuf) {
     method: req.method,
     headers
   }, (upRes) => {
-    res.writeHead(upRes.statusCode || 200, upRes.headers);
+    if (!res.headersSent) res.writeHead(upRes.statusCode || 200, upRes.headers);
     upRes.pipe(res);
   });
 
@@ -385,7 +400,9 @@ function forwardToAnthropic(req, res, bodyBuf) {
     if (!res.headersSent) {
       res.writeHead(502, { 'Content-Type': 'application/json' });
     }
-    res.end(JSON.stringify({ error: { type: 'api_error', message: err.message } }));
+    if (!res.writableEnded) {
+      res.end(JSON.stringify({ error: { type: 'api_error', message: err.message } }));
+    }
   });
 
   if (bodyBuf) upstream.end(bodyBuf);
@@ -449,8 +466,6 @@ function convertSseToAnthropicJson(sseText, fallbackModel, estimatedInputTokens 
   return JSON.stringify(msg);
 }
 
-// Repairs Workflow script tool_use arguments in-stream if a custom model omitted `export const meta`
-// or used `Date.now()` / `Math.random()` inside the script
 function patchSseChunkForClaude(chunkBuf, estimatedInputTokens) {
   let text = chunkBuf.toString('utf8');
   if (text.includes('"type":"message_start"') && text.includes('"input_tokens":0')) {
@@ -493,6 +508,8 @@ function forwardPoolToOmniRoute(req, res, baseBody, candidates, modelKey, effort
     headers['accept'] = req.headers['accept'];
   }
 
+  let delegated = false;
+
   const upstream = http.request({
     hostname: OMNIROUTE_HOST,
     port: OMNIROUTE_PORT,
@@ -502,74 +519,97 @@ function forwardPoolToOmniRoute(req, res, baseBody, candidates, modelKey, effort
   }, (upRes) => {
     const status = upRes.statusCode || 500;
     if (status !== 200 && idx + 1 < candidates.length) {
+      delegated = true;
       upRes.resume();
       return forwardPoolToOmniRoute(req, res, baseBody, candidates, modelKey, effort, idx + 1, finish);
     }
 
     if (forceUpstreamStream && status === 200) {
       const chunks = [];
-      upRes.on('data', c => chunks.push(c));
+      upRes.on('data', c => { if (!delegated) chunks.push(c); });
       upRes.on('end', () => {
+        if (delegated) return;
         const sseText = Buffer.concat(chunks).toString('utf8');
         if (sseText.includes('event: error') && !sseText.includes('message_start') && idx + 1 < candidates.length) {
+          delegated = true;
           return forwardPoolToOmniRoute(req, res, baseBody, candidates, modelKey, effort, idx + 1, finish);
         }
         finish();
         saveRouterState(modelKey, effort, candidate);
         const jsonOut = Buffer.from(convertSseToAnthropicJson(sseText, candidate, estimatedInputTokens), 'utf8');
-        res.writeHead(200, {
-          'Content-Type': 'application/json',
-          'Content-Length': jsonOut.length
-        });
-        res.end(jsonOut);
+        if (!res.headersSent) {
+          res.writeHead(200, {
+            'Content-Type': 'application/json',
+            'Content-Length': jsonOut.length
+          });
+        }
+        if (!res.writableEnded) res.end(jsonOut);
       });
+      upRes.on('error', () => { if (!delegated) finish(); });
       return;
     }
 
     // For streaming responses when fallback candidates exist, peek until first non-ping SSE event
     if (callerWantsStream && status === 200 && idx + 1 < candidates.length) {
-      let decided = false;
+      let committed = false;
       const preChunks = [];
       upRes.on('data', (chunk) => {
-        if (decided) {
-          res.write(patchSseChunkForClaude(chunk, estimatedInputTokens));
+        if (delegated) return;
+        if (committed) {
+          if (!res.writableEnded) res.write(patchSseChunkForClaude(chunk, estimatedInputTokens));
           return;
         }
         preChunks.push(chunk);
         const text = Buffer.concat(preChunks).toString('utf8');
         if (text.includes('message_start') || text.includes('content_block')) {
-          decided = true;
+          committed = true;
           saveRouterState(modelKey, effort, candidate);
-          res.writeHead(200, upRes.headers);
-          for (const c of preChunks) res.write(patchSseChunkForClaude(c, estimatedInputTokens));
+          if (!res.headersSent) res.writeHead(200, upRes.headers);
+          if (!res.writableEnded) {
+            for (const c of preChunks) res.write(patchSseChunkForClaude(c, estimatedInputTokens));
+          }
           preChunks.length = 0;
         } else if (text.includes('event: error') || text.includes('"type":"error"')) {
-          decided = true;
+          delegated = true;
           upRes.destroy();
           forwardPoolToOmniRoute(req, res, baseBody, candidates, modelKey, effort, idx + 1, finish);
         }
       });
       upRes.on('end', () => {
-        if (!decided) {
+        if (delegated) return;
+        if (!committed) {
           if (idx + 1 < candidates.length) {
+            delegated = true;
             return forwardPoolToOmniRoute(req, res, baseBody, candidates, modelKey, effort, idx + 1, finish);
           }
           finish();
-          res.writeHead(200, upRes.headers);
-          for (const c of preChunks) res.write(patchSseChunkForClaude(c, estimatedInputTokens));
+          if (!res.headersSent) res.writeHead(200, upRes.headers);
+          if (!res.writableEnded) {
+            for (const c of preChunks) res.write(patchSseChunkForClaude(c, estimatedInputTokens));
+          }
         } else {
           finish();
         }
         if (!res.writableEnded) res.end();
       });
-      upRes.on('error', () => finish());
+      upRes.on('error', () => {
+        if (delegated) return;
+        if (!committed && idx + 1 < candidates.length) {
+          delegated = true;
+          return forwardPoolToOmniRoute(req, res, baseBody, candidates, modelKey, effort, idx + 1, finish);
+        }
+        finish();
+        if (!res.writableEnded) res.end();
+      });
       return;
     }
 
     saveRouterState(modelKey, effort, candidate);
-    res.writeHead(status, upRes.headers);
+    if (!res.headersSent) res.writeHead(status, upRes.headers);
     upRes.on('data', (chunk) => {
-      res.write(callerWantsStream ? patchSseChunkForClaude(chunk, estimatedInputTokens) : chunk);
+      if (!res.writableEnded) {
+        res.write(callerWantsStream ? patchSseChunkForClaude(chunk, estimatedInputTokens) : chunk);
+      }
     });
     upRes.on('end', () => {
       finish();
@@ -582,20 +622,27 @@ function forwardPoolToOmniRoute(req, res, baseBody, candidates, modelKey, effort
   });
 
   upstream.on('error', (err) => {
+    if (delegated) return;
     if (idx + 1 < candidates.length) {
+      delegated = true;
       return forwardPoolToOmniRoute(req, res, baseBody, candidates, modelKey, effort, idx + 1, finish);
     }
     finish();
     if (!res.headersSent) {
       res.writeHead(502, { 'Content-Type': 'application/json' });
     }
-    res.end(JSON.stringify({ error: { type: 'api_error', message: 'OmniRoute error: ' + err.message } }));
+    if (!res.writableEnded) {
+      res.end(JSON.stringify({ error: { type: 'api_error', message: 'OmniRoute error: ' + err.message } }));
+    }
   });
 
   upstream.end(payload);
 }
 
 const server = http.createServer((req, res) => {
+  req.on('error', () => {});
+  res.on('error', () => {});
+
   if (req.method === 'GET' && req.url === '/health') {
     res.writeHead(200, { 'Content-Type': 'application/json' });
     return res.end(JSON.stringify({ status: 'ok' }));
@@ -647,7 +694,7 @@ const server = http.createServer((req, res) => {
             effort === 'low' ? 'agy/gemini-4-argon-low' :
             'agy/gemini-4-argon-medium';
           const cleanBody = { ...body };
-          adaptCustomModelBody(cleanBody);
+          adaptCustomModelBody(cleanBody, false);
           cleanBody.includeThoughts = true;
           cleanBody.thinking = { type: 'adaptive' };
           cleanBody.output_config = { effort };
@@ -659,7 +706,7 @@ const server = http.createServer((req, res) => {
         if (isDeepSeek) {
           const effort = extractEffort(body, 'claude-deepseek-v4-1-flash-1017');
           const cleanBody = { ...body };
-          adaptCustomModelBody(cleanBody);
+          adaptCustomModelBody(cleanBody, true);
           cleanBody.thinking = { type: 'adaptive' };
           cleanBody.output_config = { effort };
           cleanBody.effort = effort;
@@ -682,7 +729,7 @@ const server = http.createServer((req, res) => {
         if (isKimi) {
           const effort = extractEffort(body, 'claude-kimi-k3');
           const cleanBody = { ...body };
-          adaptCustomModelBody(cleanBody);
+          adaptCustomModelBody(cleanBody, true);
           cleanBody.thinking = { type: 'adaptive' };
           cleanBody.output_config = { effort };
           cleanBody.effort = effort;
