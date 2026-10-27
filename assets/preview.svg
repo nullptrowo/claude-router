@@ -1,0 +1,94 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 980 510" width="980" height="510">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#0d1117"/>
+      <stop offset="100%" stop-color="#090c10"/>
+    </linearGradient>
+    <filter id="shadow" x="-5%" y="-5%" width="110%" height="110%">
+      <feDropShadow dx="0" dy="10" stdDeviation="14" flood-color="#000000" flood-opacity="0.65"/>
+    </filter>
+  </defs>
+
+  <!-- Outer Window -->
+  <rect x="14" y="14" width="952" height="482" rx="12" fill="url(#bg)" stroke="#30363d" stroke-width="1.5" filter="url(#shadow)"/>
+
+  <!-- Window Title Bar -->
+  <rect x="14" y="14" width="952" height="38" rx="12" fill="#161b22"/>
+  <rect x="14" y="38" width="952" height="14" fill="#161b22"/>
+  <line x1="14" y1="52" x2="966" y2="52" stroke="#30363d" stroke-width="1"/>
+  <circle cx="38" cy="33" r="6" fill="#ff5f56"/>
+  <circle cx="58" cy="33" r="6" fill="#ffbd2e"/>
+  <circle cx="78" cy="33" r="6" fill="#27c93f"/>
+  <text x="490" y="38" text-anchor="middle" fill="#8b949e" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="13" font-weight="600">claude — v2.1.305 (Smart Router :20129 -> OmniRoute :20128)</text>
+
+  <!-- Section 1: /model Picker -->
+  <g font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="13.5">
+    <text x="40" y="82" fill="#79c0ff" font-weight="700">Select model</text>
+    <text x="40" y="102" fill="#8b949e">Switch between Claude models. Your pick becomes the default for new sessions.</text>
+
+    <text x="52" y="132" fill="#c9d1d9">1. Default (recommended)</text>
+    <text x="315" y="132" fill="#d97757" font-weight="700">Opus 5.5</text>
+    <text x="385" y="132" fill="#8b949e">· Best for everyday, complex tasks · 1M context</text>
+
+    <text x="52" y="154" fill="#c9d1d9">2. Opus</text>
+    <text x="315" y="154" fill="#d97757" font-weight="700">Opus 5.5</text>
+    <text x="385" y="154" fill="#8b949e">· Best for everyday, complex tasks · 1M context</text>
+
+    <text x="52" y="176" fill="#c9d1d9">3. Fable</text>
+    <text x="315" y="176" fill="#c9d1d9">Fable 5.1</text>
+    <text x="392" y="176" fill="#8b949e">· Most capable for hardest and longest-running tasks</text>
+
+    <text x="52" y="198" fill="#c9d1d9">4. Sonnet</text>
+    <text x="315" y="198" fill="#c9d1d9">Sonnet 5.5</text>
+    <text x="400" y="198" fill="#8b949e">· Efficient for routine tasks · 1M context</text>
+
+    <text x="52" y="220" fill="#c9d1d9">5. Haiku</text>
+    <text x="315" y="220" fill="#c9d1d9">Haiku 5.5</text>
+    <text x="392" y="220" fill="#8b949e">· Fastest for quick answers</text>
+
+    <text x="52" y="242" fill="#c9d1d9">6. Gemini 4 Argon</text>
+    <text x="315" y="242" fill="#79c0ff">Google Antigravity 5x</text>
+    <text x="492" y="242" fill="#8b949e">· 1M context</text>
+
+    <!-- Selected Row -->
+    <rect x="34" y="249" width="912" height="22" rx="4" fill="#1f2937" opacity="0.75"/>
+    <text x="38" y="264" fill="#79c0ff" font-weight="700">❯</text>
+    <text x="52" y="264" fill="#3fb950" font-weight="700">7. DeepSeek V4.1 Flash 1017 ✔</text>
+    <text x="315" y="264" fill="#e6edf3">Smart Pool (Cline + CodeBuddy + KiloCode) · 1M context</text>
+
+    <text x="52" y="286" fill="#c9d1d9">8. Kimi K3</text>
+    <text x="315" y="286" fill="#8b949e">Smart Pool (Cline + CodeBuddy + KiloCode) · 1M context</text>
+
+    <!-- Effort Slider -->
+    <text x="40" y="318" fill="#d97757" font-weight="700">●</text>
+    <text x="56" y="318" fill="#e6edf3" font-weight="600">Max effort</text>
+    <text x="145" y="318" fill="#8b949e">←/→ to adjust (Low · Medium · High · xHigh · Max)</text>
+
+    <line x1="34" y1="336" x2="946" y2="336" stroke="#21262d" stroke-width="1"/>
+
+    <!-- Live Thinking Stream -->
+    <text x="40" y="364" fill="#8b949e" font-style="italic">∴ Thinking (max effort) — verifying packet simulation &amp; multi-provider failover...</text>
+    <text x="40" y="386" fill="#3fb950">●</text>
+    <text x="56" y="386" fill="#e6edf3" font-weight="700">Bash</text>
+    <text x="90" y="386" fill="#8b949e">(git status -s &amp;&amp; node test-router.js)</text>
+    <text x="56" y="406" fill="#8b949e">⎿  HTTP 200 · thinking_delta=true · text_delta=true · 1.8s</text>
+
+    <!-- Footer Statusline -->
+    <rect x="15" y="454" width="950" height="41" rx="10" fill="#161b22"/>
+    <line x1="14" y1="454" x2="966" y2="454" stroke="#30363d" stroke-width="1"/>
+    <text x="34" y="479" fill="#e6edf3" font-size="12.2">
+      <tspan fill="#3fb950" font-weight="700">DeepSeek V4.1 Flash 1017 (Max)</tspan>
+      <tspan fill="#484f58"> | </tspan>
+      <tspan fill="#c9d1d9">7d ███░░░░░ 38%</tspan>
+      <tspan fill="#79c0ff"> (AGY 14.2%/5.0%)</tspan>
+      <tspan fill="#8b949e"> 4d11h</tspan>
+      <tspan fill="#484f58"> | </tspan>
+      <tspan fill="#c9d1d9">5h █░░░░ 19%</tspan>
+      <tspan fill="#8b949e"> 3h42m</tspan>
+      <tspan fill="#484f58"> | </tspan>
+      <tspan fill="#8b949e">hit:88.4% ttl:56m</tspan>
+      <tspan fill="#484f58"> | </tspan>
+      <tspan fill="#d2a8ff">ctx:142.0k(14%) 12t</tspan>
+    </text>
+  </g>
+</svg>

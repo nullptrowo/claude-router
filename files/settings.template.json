@@ -16,19 +16,19 @@
         "model": "claude-argon-4",
         "label": "Gemini 4 Argon",
         "description": "Google Antigravity 5x · 1M context",
-        "behavesAs": "claude-opus-4-5"
+        "behavesAs": "claude-opus-5-5"
       },
       {
         "model": "claude-deepseek-v4-1-flash-1017",
         "label": "DeepSeek V4.1 Flash 1017",
         "description": "Smart Pool (Cline + CodeBuddy + KiloCode) · 1M context",
-        "behavesAs": "claude-opus-4-6"
+        "behavesAs": "claude-opus-5-5"
       },
       {
         "model": "claude-kimi-k3",
         "label": "Kimi K3",
         "description": "Smart Pool (Cline + CodeBuddy + KiloCode) · 1M context",
-        "behavesAs": "claude-opus-4-6"
+        "behavesAs": "claude-opus-5-5"
       }
     ]
   },

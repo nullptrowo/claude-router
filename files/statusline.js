@@ -179,7 +179,10 @@ process.stdin.on('end', async () => {
     const model = isArgon ? `Argon ${activeEffort}`
                 : isDeepSeek ? `DeepSeek V4.1 Flash 1017 (${activeEffort})`
                 : isKimi ? `Kimi K3 (${activeEffort})`
-                : rawModelId.includes('opus') ? 'Opus 5.5'
+                : rawModelId.includes('opus') ? `Opus 5.5 (${activeEffort})`
+                : rawModelId.includes('sonnet') ? `Sonnet 5.5 (${activeEffort})`
+                : rawModelId.includes('haiku') ? `Haiku 5.5 (${activeEffort})`
+                : rawModelId.includes('fable') ? `Fable 5.1 (${activeEffort})`
                 : (data.model?.display_name || 'Claude');
     const tp = data.transcript_path;
 
@@ -278,7 +281,7 @@ process.stdin.on('end', async () => {
     parts.push(`out:${fmtK(outTok)} cw:${fmtK(cacheWrite)} cr:${fmtK(cacheRead)} hit:${cacheHitPct}% ttl:${ttlStr}`);
 
     const activeCtx = ctxTokens || lastCtx;
-    const activePct = ctxPct != null ? `${Number(ctxPct).toFixed(0)}%` : `${Math.round((activeCtx / 200000) * 100)}%`;
+    const activePct = ctxPct != null ? `${Number(ctxPct).toFixed(0)}%` : `${Math.round((activeCtx / 1000000) * 100)}%`;
     parts.push(`ctx:${fmtK(activeCtx)}(${activePct}) ${turns}t`);
 
     process.stdout.write(parts.join(' | '));
