@@ -1,4 +1,4 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 980 510" width="980" height="510">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 980 610" width="980" height="610">
   <defs>
     <linearGradient id="bg" x1="0%" y1="0%" x2="0%" y2="100%">
       <stop offset="0%" stop-color="#0d1117"/>
@@ -10,7 +10,7 @@
   </defs>
 
   <!-- Outer Window -->
-  <rect x="14" y="14" width="952" height="482" rx="12" fill="url(#bg)" stroke="#30363d" stroke-width="1.5" filter="url(#shadow)"/>
+  <rect x="14" y="14" width="952" height="582" rx="12" fill="url(#bg)" stroke="#30363d" stroke-width="1.5" filter="url(#shadow)"/>
 
   <!-- Window Title Bar -->
   <rect x="14" y="14" width="952" height="38" rx="12" fill="#161b22"/>
@@ -22,61 +22,75 @@
   <text x="490" y="38" text-anchor="middle" fill="#8b949e" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="13" font-weight="600">claude — v2.1.305 (Smart Router :20129 -> OmniRoute :20128)</text>
 
   <!-- Section 1: /model Picker -->
-  <g font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="13.5">
-    <text x="40" y="82" fill="#79c0ff" font-weight="700">Select model</text>
-    <text x="40" y="102" fill="#8b949e">Switch between Claude models. Your pick becomes the default for new sessions.</text>
+  <g font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="13.2">
+    <text x="40" y="80" fill="#79c0ff" font-weight="700">Select model</text>
+    <text x="40" y="99" fill="#8b949e">Switch between Claude models. Your pick becomes the default for new sessions.</text>
 
-    <text x="52" y="132" fill="#c9d1d9">1. Default (recommended)</text>
-    <text x="315" y="132" fill="#d97757" font-weight="700">Opus 5.5</text>
-    <text x="385" y="132" fill="#8b949e">· Best for everyday, complex tasks · 1M context</text>
+    <text x="52" y="126" fill="#c9d1d9">1. Default (recommended)</text>
+    <text x="315" y="126" fill="#d97757" font-weight="700">Opus 5.5</text>
+    <text x="385" y="126" fill="#8b949e">· Best for everyday, complex tasks · 1M context</text>
 
-    <text x="52" y="154" fill="#c9d1d9">2. Opus</text>
-    <text x="315" y="154" fill="#d97757" font-weight="700">Opus 5.5</text>
-    <text x="385" y="154" fill="#8b949e">· Best for everyday, complex tasks · 1M context</text>
+    <text x="52" y="147" fill="#c9d1d9">2. Opus</text>
+    <text x="315" y="147" fill="#d97757" font-weight="700">Opus 5.5</text>
+    <text x="385" y="147" fill="#8b949e">· Best for everyday, complex tasks · 1M context</text>
 
-    <text x="52" y="176" fill="#c9d1d9">3. Fable</text>
-    <text x="315" y="176" fill="#c9d1d9">Fable 5.1</text>
-    <text x="392" y="176" fill="#8b949e">· Most capable for hardest and longest-running tasks</text>
+    <text x="52" y="168" fill="#c9d1d9">3. Fable</text>
+    <text x="315" y="168" fill="#c9d1d9">Fable 5.1</text>
+    <text x="392" y="168" fill="#8b949e">· Most capable for hardest and longest-running tasks</text>
 
-    <text x="52" y="198" fill="#c9d1d9">4. Sonnet</text>
-    <text x="315" y="198" fill="#c9d1d9">Sonnet 5.5</text>
-    <text x="400" y="198" fill="#8b949e">· Efficient for routine tasks · 1M context</text>
+    <text x="52" y="189" fill="#c9d1d9">4. Sonnet</text>
+    <text x="315" y="189" fill="#c9d1d9">Sonnet 5.5</text>
+    <text x="400" y="189" fill="#8b949e">· Efficient for routine tasks · 1M context</text>
 
-    <text x="52" y="220" fill="#c9d1d9">5. Haiku</text>
-    <text x="315" y="220" fill="#c9d1d9">Haiku 5.5</text>
-    <text x="392" y="220" fill="#8b949e">· Fastest for quick answers</text>
+    <text x="52" y="210" fill="#c9d1d9">5. Haiku</text>
+    <text x="315" y="210" fill="#c9d1d9">Haiku 5.5</text>
+    <text x="392" y="210" fill="#8b949e">· Fastest for quick answers</text>
 
-    <text x="52" y="242" fill="#c9d1d9">6. Gemini 4 Argon</text>
-    <text x="315" y="242" fill="#79c0ff">Google Antigravity 5x</text>
-    <text x="492" y="242" fill="#8b949e">· 1M context</text>
+    <text x="52" y="231" fill="#c9d1d9">6. Gemini 4 Argon</text>
+    <text x="315" y="231" fill="#79c0ff">Google Antigravity 5x</text>
+    <text x="492" y="231" fill="#8b949e">· 1M context</text>
 
     <!-- Selected Row -->
-    <rect x="34" y="249" width="912" height="22" rx="4" fill="#1f2937" opacity="0.75"/>
-    <text x="38" y="264" fill="#79c0ff" font-weight="700">❯</text>
-    <text x="52" y="264" fill="#3fb950" font-weight="700">7. DeepSeek V4.1 Flash 1017 ✔</text>
-    <text x="315" y="264" fill="#e6edf3">Smart Pool (Cline + CodeBuddy + KiloCode) · 1M context</text>
+    <rect x="34" y="238" width="912" height="21" rx="4" fill="#1f2937" opacity="0.8"/>
+    <text x="38" y="253" fill="#79c0ff" font-weight="700">❯</text>
+    <text x="52" y="253" fill="#3fb950" font-weight="700">7. DeepSeek V4.1 Flash 1017 ✔</text>
+    <text x="315" y="253" fill="#e6edf3">Smart Pool (Cline + CodeBuddy + KiloCode) · 1M context</text>
 
-    <text x="52" y="286" fill="#c9d1d9">8. Kimi K3</text>
-    <text x="315" y="286" fill="#8b949e">Smart Pool (Cline + CodeBuddy + KiloCode) · 1M context</text>
+    <text x="52" y="274" fill="#c9d1d9">8. Kimi K3</text>
+    <text x="315" y="274" fill="#8b949e">Smart Pool (Cline + CodeBuddy + KiloCode) · 1M context</text>
 
     <!-- Effort Slider -->
-    <text x="40" y="318" fill="#d97757" font-weight="700">●</text>
-    <text x="56" y="318" fill="#e6edf3" font-weight="600">Max effort</text>
-    <text x="145" y="318" fill="#8b949e">←/→ to adjust (Low · Medium · High · xHigh · Max)</text>
+    <text x="40" y="302" fill="#d97757" font-weight="700">●</text>
+    <text x="56" y="302" fill="#e6edf3" font-weight="600">Max effort</text>
+    <text x="145" y="302" fill="#8b949e">←/→ to adjust (Low · Medium · High · xHigh · Max)</text>
 
-    <line x1="34" y1="336" x2="946" y2="336" stroke="#21262d" stroke-width="1"/>
+    <line x1="34" y1="318" x2="946" y2="318" stroke="#21262d" stroke-width="1"/>
 
-    <!-- Live Thinking Stream -->
-    <text x="40" y="364" fill="#8b949e" font-style="italic">∴ Thinking (max effort) — verifying packet simulation &amp; multi-provider failover...</text>
-    <text x="40" y="386" fill="#3fb950">●</text>
-    <text x="56" y="386" fill="#e6edf3" font-weight="700">Bash</text>
-    <text x="90" y="386" fill="#8b949e">(git status -s &amp;&amp; node test-router.js)</text>
-    <text x="56" y="406" fill="#8b949e">⎿  HTTP 200 · thinking_delta=true · text_delta=true · 1.8s</text>
+    <!-- Section 2: Native Thinking (∴) Across Custom Models -->
+    <text x="40" y="342" fill="#79c0ff" font-weight="700">Native Thinking (∴) Streaming — Gemini 4 Argon · DeepSeek V4.1 · Kimi K3</text>
+
+    <!-- Gemini 4 Argon Thought Block -->
+    <rect x="40" y="353" width="900" height="54" rx="6" fill="#131820" stroke="#21262d" stroke-width="1"/>
+    <text x="52" y="372" fill="#79c0ff" font-weight="700">Gemini 4 Argon</text>
+    <text x="172" y="372" fill="#6e7681">[agy/gemini-4-argon-high · includeThoughts=true · thinking_delta]</text>
+    <text x="52" y="394" fill="#8b949e" font-style="italic">∴ Let me inspect the movement simulation tick loop and verify GrimAC reach constraints before patching...</text>
+
+    <!-- DeepSeek V4.1 Flash 1017 Thought Block -->
+    <rect x="40" y="415" width="900" height="54" rx="6" fill="#131820" stroke="#21262d" stroke-width="1"/>
+    <text x="52" y="434" fill="#3fb950" font-weight="700">DeepSeek V4.1 Flash 1017</text>
+    <text x="252" y="434" fill="#6e7681">[cl/deepseek/deepseek-v4.1-flash-1017 · effort=max · thinking_delta]</text>
+    <text x="52" y="456" fill="#8b949e" font-style="italic">∴ Analyzing OAuth pool latency: Cline responded in 210ms; streaming reasoning tokens prior to tool call...</text>
+
+    <!-- Kimi K3 Thought Block -->
+    <rect x="40" y="477" width="900" height="54" rx="6" fill="#131820" stroke="#21262d" stroke-width="1"/>
+    <text x="52" y="496" fill="#d2a8ff" font-weight="700">Kimi K3</text>
+    <text x="116" y="496" fill="#6e7681">[cl/moonshotai/kimi-k3 -> cbai/kimi-k3 · effort=max · thinking_delta]</text>
+    <text x="52" y="518" fill="#8b949e" font-style="italic">∴ Checking cross-file references and validating edge cases before executing the atomic edit...</text>
 
     <!-- Footer Statusline -->
-    <rect x="15" y="454" width="950" height="41" rx="10" fill="#161b22"/>
-    <line x1="14" y1="454" x2="966" y2="454" stroke="#30363d" stroke-width="1"/>
-    <text x="34" y="479" fill="#e6edf3" font-size="12.2">
+    <rect x="15" y="554" width="950" height="41" rx="10" fill="#161b22"/>
+    <line x1="14" y1="554" x2="966" y2="554" stroke="#30363d" stroke-width="1"/>
+    <text x="34" y="579" fill="#e6edf3" font-size="12.2">
       <tspan fill="#3fb950" font-weight="700">DeepSeek V4.1 Flash 1017 (Max)</tspan>
       <tspan fill="#484f58"> | </tspan>
       <tspan fill="#c9d1d9">7d ███░░░░░ 38%</tspan>
