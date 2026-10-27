@@ -19,50 +19,44 @@
   <circle cx="38" cy="33" r="6" fill="#ff5f56"/>
   <circle cx="58" cy="33" r="6" fill="#ffbd2e"/>
   <circle cx="78" cy="33" r="6" fill="#27c93f"/>
-  <text x="490" y="38" text-anchor="middle" fill="#8b949e" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="13" font-weight="600">claude — v2.1.305 (Smart Router :20129 -> OmniRoute :20128)</text>
+  <text x="490" y="38" text-anchor="middle" fill="#8b949e" font-family="Consolas, 'SFMono-Regular', Menlo, monospace" font-size="13" font-weight="600">claude — v2.1.305 (Smart Router :20129 -&gt; OmniRoute :20128)</text>
 
-  <!-- Section 1: /model Picker -->
-  <g font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="13.2">
+  <!-- Content -->
+  <g font-family="Consolas, 'SFMono-Regular', Menlo, monospace" font-size="13.2">
+    <!-- Section 1: /model Picker -->
     <text x="40" y="80" fill="#79c0ff" font-weight="700">Select model</text>
     <text x="40" y="99" fill="#8b949e">Switch between Claude models. Your pick becomes the default for new sessions.</text>
 
     <text x="52" y="126" fill="#c9d1d9">1. Default (recommended)</text>
-    <text x="315" y="126" fill="#d97757" font-weight="700">Opus 5.5</text>
-    <text x="385" y="126" fill="#8b949e">· Best for everyday, complex tasks · 1M context</text>
+    <text x="315" y="126"><tspan fill="#d97757" font-weight="700">Opus 5.5</tspan><tspan fill="#8b949e"> · Best for everyday, complex tasks · 1M context</tspan></text>
 
     <text x="52" y="147" fill="#c9d1d9">2. Opus</text>
-    <text x="315" y="147" fill="#d97757" font-weight="700">Opus 5.5</text>
-    <text x="385" y="147" fill="#8b949e">· Best for everyday, complex tasks · 1M context</text>
+    <text x="315" y="147"><tspan fill="#d97757" font-weight="700">Opus 5.5</tspan><tspan fill="#8b949e"> · Best for everyday, complex tasks · 1M context</tspan></text>
 
     <text x="52" y="168" fill="#c9d1d9">3. Fable</text>
-    <text x="315" y="168" fill="#c9d1d9">Fable 5.1</text>
-    <text x="392" y="168" fill="#8b949e">· Most capable for hardest and longest-running tasks</text>
+    <text x="315" y="168"><tspan fill="#c9d1d9">Fable 5.1</tspan><tspan fill="#8b949e"> · Most capable for hardest and longest-running tasks</tspan></text>
 
     <text x="52" y="189" fill="#c9d1d9">4. Sonnet</text>
-    <text x="315" y="189" fill="#c9d1d9">Sonnet 5.5</text>
-    <text x="400" y="189" fill="#8b949e">· Efficient for routine tasks · 1M context</text>
+    <text x="315" y="189"><tspan fill="#c9d1d9">Sonnet 5.5</tspan><tspan fill="#8b949e"> · Efficient for routine tasks · 1M context</tspan></text>
 
     <text x="52" y="210" fill="#c9d1d9">5. Haiku</text>
-    <text x="315" y="210" fill="#c9d1d9">Haiku 5.5</text>
-    <text x="392" y="210" fill="#8b949e">· Fastest for quick answers</text>
+    <text x="315" y="210"><tspan fill="#c9d1d9">Haiku 5.5</tspan><tspan fill="#8b949e"> · Fastest for quick answers</tspan></text>
 
     <text x="52" y="231" fill="#c9d1d9">6. Gemini 4 Argon</text>
-    <text x="315" y="231" fill="#79c0ff">Google Antigravity 5x</text>
-    <text x="492" y="231" fill="#8b949e">· 1M context</text>
+    <text x="315" y="231"><tspan fill="#79c0ff">Google Antigravity 5x</tspan><tspan fill="#8b949e"> · 1M context</tspan></text>
 
     <!-- Selected Row -->
     <rect x="34" y="238" width="912" height="21" rx="4" fill="#1f2937" opacity="0.8"/>
-    <text x="38" y="253" fill="#79c0ff" font-weight="700">❯</text>
-    <text x="52" y="253" fill="#3fb950" font-weight="700">7. DeepSeek V4.1 Flash 1017 ✔</text>
+    <text x="38" y="253" fill="#79c0ff" font-weight="700">&gt;</text>
+    <text x="52" y="253" fill="#3fb950" font-weight="700">7. DeepSeek V4.1 Flash 1017 ✓</text>
     <text x="315" y="253" fill="#e6edf3">Smart Pool (Cline + CodeBuddy + KiloCode) · 1M context</text>
 
     <text x="52" y="274" fill="#c9d1d9">8. Kimi K3</text>
     <text x="315" y="274" fill="#8b949e">Smart Pool (Cline + CodeBuddy + KiloCode) · 1M context</text>
 
     <!-- Effort Slider -->
-    <text x="40" y="302" fill="#d97757" font-weight="700">●</text>
-    <text x="56" y="302" fill="#e6edf3" font-weight="600">Max effort</text>
-    <text x="145" y="302" fill="#8b949e">←/→ to adjust (Low · Medium · High · xHigh · Max)</text>
+    <circle cx="44" cy="298" r="3.5" fill="#d97757"/>
+    <text x="56" y="302"><tspan fill="#e6edf3" font-weight="700">Max effort</tspan><tspan fill="#8b949e">  &lt;-/-&gt; to adjust (Low · Medium · High · xHigh · Max)</tspan></text>
 
     <line x1="34" y1="318" x2="946" y2="318" stroke="#21262d" stroke-width="1"/>
 
@@ -71,38 +65,61 @@
 
     <!-- Gemini 4 Argon Thought Block -->
     <rect x="40" y="353" width="900" height="54" rx="6" fill="#131820" stroke="#21262d" stroke-width="1"/>
-    <text x="52" y="372" fill="#79c0ff" font-weight="700">Gemini 4 Argon</text>
-    <text x="172" y="372" fill="#6e7681">[agy/gemini-4-argon-high · includeThoughts=true · thinking_delta]</text>
+    <text x="52" y="372"><tspan fill="#79c0ff" font-weight="700">Gemini 4 Argon</tspan><tspan fill="#6e7681">  [agy/gemini-4-argon-high · includeThoughts=true · thinking_delta]</tspan></text>
     <text x="52" y="394" fill="#8b949e" font-style="italic">∴ Let me inspect the movement simulation tick loop and verify GrimAC reach constraints before patching...</text>
 
     <!-- DeepSeek V4.1 Flash 1017 Thought Block -->
     <rect x="40" y="415" width="900" height="54" rx="6" fill="#131820" stroke="#21262d" stroke-width="1"/>
-    <text x="52" y="434" fill="#3fb950" font-weight="700">DeepSeek V4.1 Flash 1017</text>
-    <text x="252" y="434" fill="#6e7681">[cl/deepseek/deepseek-v4.1-flash-1017 · effort=max · thinking_delta]</text>
+    <text x="52" y="434"><tspan fill="#3fb950" font-weight="700">DeepSeek V4.1 Flash 1017</tspan><tspan fill="#6e7681">  [cl/deepseek/deepseek-v4.1-flash-1017 · effort=max · thinking_delta]</tspan></text>
     <text x="52" y="456" fill="#8b949e" font-style="italic">∴ Analyzing OAuth pool latency: Cline responded in 210ms; streaming reasoning tokens prior to tool call...</text>
 
     <!-- Kimi K3 Thought Block -->
     <rect x="40" y="477" width="900" height="54" rx="6" fill="#131820" stroke="#21262d" stroke-width="1"/>
-    <text x="52" y="496" fill="#d2a8ff" font-weight="700">Kimi K3</text>
-    <text x="116" y="496" fill="#6e7681">[cl/moonshotai/kimi-k3 -> cbai/kimi-k3 · effort=max · thinking_delta]</text>
+    <text x="52" y="496"><tspan fill="#d2a8ff" font-weight="700">Kimi K3</tspan><tspan fill="#6e7681">  [cl/moonshotai/kimi-k3 -&gt; cbai/kimi-k3 · effort=max · thinking_delta]</tspan></text>
     <text x="52" y="518" fill="#8b949e" font-style="italic">∴ Checking cross-file references and validating edge cases before executing the atomic edit...</text>
+  </g>
 
-    <!-- Footer Statusline -->
-    <rect x="15" y="554" width="950" height="41" rx="10" fill="#161b22"/>
-    <line x1="14" y1="554" x2="966" y2="554" stroke="#30363d" stroke-width="1"/>
-    <text x="34" y="579" fill="#e6edf3" font-size="12.2">
-      <tspan fill="#3fb950" font-weight="700">DeepSeek V4.1 Flash 1017 (Max)</tspan>
-      <tspan fill="#484f58"> | </tspan>
-      <tspan fill="#c9d1d9">7d ███░░░░░ 38%</tspan>
-      <tspan fill="#79c0ff"> (AGY 14.2%/5.0%)</tspan>
-      <tspan fill="#8b949e"> 4d11h</tspan>
-      <tspan fill="#484f58"> | </tspan>
-      <tspan fill="#c9d1d9">5h █░░░░ 19%</tspan>
-      <tspan fill="#8b949e"> 3h42m</tspan>
-      <tspan fill="#484f58"> | </tspan>
-      <tspan fill="#8b949e">hit:88.4% ttl:56m</tspan>
-      <tspan fill="#484f58"> | </tspan>
-      <tspan fill="#d2a8ff">ctx:142.0k(14%) 12t</tspan>
-    </text>
+  <!-- Footer Statusline (Vector-aligned bars & crisp segments) -->
+  <rect x="15" y="554" width="950" height="41" rx="10" fill="#161b22"/>
+  <line x1="14" y1="554" x2="966" y2="554" stroke="#30363d" stroke-width="1"/>
+
+  <g font-family="Consolas, 'SFMono-Regular', Menlo, monospace" font-size="12.2">
+    <!-- Segment 1: Active Model -->
+    <text x="32" y="579" fill="#3fb950" font-weight="700">DeepSeek V4.1 Flash 1017 (Max)</text>
+    <line x1="246" y1="567" x2="246" y2="583" stroke="#30363d" stroke-width="1.2"/>
+
+    <!-- Segment 2: 7d Bar (8 vector blocks aligned 1:1 with text cap-height) -->
+    <text x="256" y="579" fill="#c9d1d9" font-weight="600">7d</text>
+    <g transform="translate(276, 569)">
+      <rect x="0"  y="0" width="5.5" height="10.5" rx="1" fill="#c9d1d9"/>
+      <rect x="7"  y="0" width="5.5" height="10.5" rx="1" fill="#c9d1d9"/>
+      <rect x="14" y="0" width="5.5" height="10.5" rx="1" fill="#c9d1d9"/>
+      <rect x="21" y="0" width="5.5" height="10.5" rx="1" fill="#30363d"/>
+      <rect x="28" y="0" width="5.5" height="10.5" rx="1" fill="#30363d"/>
+      <rect x="35" y="0" width="5.5" height="10.5" rx="1" fill="#30363d"/>
+      <rect x="42" y="0" width="5.5" height="10.5" rx="1" fill="#30363d"/>
+      <rect x="49" y="0" width="5.5" height="10.5" rx="1" fill="#30363d"/>
+    </g>
+    <text x="338" y="579"><tspan fill="#c9d1d9" font-weight="600">38%</tspan><tspan fill="#79c0ff"> (AGY 14.2%/5.0%)</tspan><tspan fill="#8b949e"> 4d11h</tspan></text>
+    <line x1="524" y1="567" x2="524" y2="583" stroke="#30363d" stroke-width="1.2"/>
+
+    <!-- Segment 3: 5h Bar (5 vector blocks aligned 1:1 with text cap-height) -->
+    <text x="534" y="579" fill="#c9d1d9" font-weight="600">5h</text>
+    <g transform="translate(554, 569)">
+      <rect x="0"  y="0" width="5.5" height="10.5" rx="1" fill="#c9d1d9"/>
+      <rect x="7"  y="0" width="5.5" height="10.5" rx="1" fill="#30363d"/>
+      <rect x="14" y="0" width="5.5" height="10.5" rx="1" fill="#30363d"/>
+      <rect x="21" y="0" width="5.5" height="10.5" rx="1" fill="#30363d"/>
+      <rect x="28" y="0" width="5.5" height="10.5" rx="1" fill="#30363d"/>
+    </g>
+    <text x="595" y="579"><tspan fill="#c9d1d9" font-weight="600">19%</tspan><tspan fill="#8b949e"> 3h42m</tspan></text>
+    <line x1="667" y1="567" x2="667" y2="583" stroke="#30363d" stroke-width="1.2"/>
+
+    <!-- Segment 4: Prompt Cache Hit & TTL -->
+    <text x="677" y="579" fill="#8b949e">hit:88.4% ttl:56m</text>
+    <line x1="802" y1="567" x2="802" y2="583" stroke="#30363d" stroke-width="1.2"/>
+
+    <!-- Segment 5: Context & Turns -->
+    <text x="812" y="579" fill="#d2a8ff" font-weight="600">ctx:142.0k(14%) 12t</text>
   </g>
 </svg>
