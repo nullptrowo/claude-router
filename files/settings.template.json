@@ -1,0 +1,114 @@
+{
+  "env": {
+    "ENABLE_PROMPT_CACHING_1H": "1",
+    "ANTHROPIC_BASE_URL": "http://127.0.0.1:20129",
+    "CLAUDE_CODE_ALWAYS_ENABLE_EFFORT": "1",
+    "DISABLE_TELEMETRY": "1",
+    "CLAUDE_CODE_GB_DISK_CACHE_WHEN_TELEMETRY_OFF": "1"
+  },
+  "permissions": {
+    "defaultMode": "bypassPermissions"
+  },
+  "model": "claude-deepseek-v4-1-flash-1017",
+  "modelPicker": {
+    "options": [
+      {
+        "model": "claude-argon-4",
+        "label": "Gemini 4 Argon",
+        "description": "Google Antigravity 5x · 1M context",
+        "behavesAs": "claude-opus-4-5"
+      },
+      {
+        "model": "claude-deepseek-v4-1-flash-1017",
+        "label": "DeepSeek V4.1 Flash 1017",
+        "description": "Smart Pool (Cline + CodeBuddy + KiloCode) · 1M context",
+        "behavesAs": "claude-opus-4-6"
+      },
+      {
+        "model": "claude-kimi-k3",
+        "label": "Kimi K3",
+        "description": "Smart Pool (Cline + CodeBuddy + KiloCode) · 1M context",
+        "behavesAs": "claude-opus-4-6"
+      }
+    ]
+  },
+  "hooks": {
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node __CLAUDE_DIR__/hooks/prompt-guard.js"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node __CLAUDE_DIR__/hooks/stop-autosave.js"
+          }
+        ]
+      }
+    ],
+    "PreCompact": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node __CLAUDE_DIR__/hooks/pre-compact.js"
+          }
+        ]
+      }
+    ],
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node __CLAUDE_DIR__/hooks/session-start.js"
+          }
+        ]
+      }
+    ]
+  },
+  "statusLine": {
+    "type": "command",
+    "command": "node __CLAUDE_DIR__/statusline.js"
+  },
+  "outputStyle": "Concise",
+  "promptCacheTtl": "1h",
+  "subagentPromptCacheTtl": "1h",
+  "alwaysThinkingEnabled": true,
+  "effortLevel": "medium",
+  "modelSettings": {
+    "claude-opus-5-5": {
+      "effortLevel": "low"
+    },
+    "claude-argon-4": {
+      "effortLevel": "medium",
+      "maxEffortLevel": "high"
+    },
+    "claude-deepseek-v4-1-flash-1017": {
+      "effortLevel": "medium",
+      "maxEffortLevel": "max"
+    },
+    "claude-kimi-k3": {
+      "effortLevel": "high",
+      "maxEffortLevel": "max"
+    }
+  },
+  "autoCompactWindow": 240000,
+  "autoUpdatesChannel": "latest",
+  "tui": "fullscreen",
+  "showThinkingSummaries": true,
+  "skipDangerousModePermissionPrompt": true,
+  "theme": "auto",
+  "verbose": false,
+  "autoCompactEnabled": true,
+  "idleCompaction": false,
+  "remoteControlAtStartup": false,
+  "agentPushNotifEnabled": true
+}

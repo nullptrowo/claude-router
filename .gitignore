@@ -1,0 +1,8 @@
+.credentials.json
+*.sqlite
+*.sqlite-shm
+*.sqlite-wal
+live-usage-cache.json
+argon-state.json
+node_modules/
+.env
