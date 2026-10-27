@@ -55,8 +55,8 @@
     <text x="315" y="274" fill="#8b949e">Smart Pool (Cline + CodeBuddy + KiloCode) · 1M context</text>
 
     <!-- Effort Slider -->
-    <circle cx="44" cy="298" r="3.5" fill="#d97757"/>
-    <text x="56" y="302"><tspan fill="#e6edf3" font-weight="700">Max effort</tspan><tspan fill="#8b949e">  &lt;-/-&gt; to adjust (Low · Medium · High · xHigh · Max)</tspan></text>
+    <circle cx="44" cy="298" r="3.5" fill="#6a9bcc"/>
+    <text x="56" y="302"><tspan fill="#6a9bcc" font-weight="700">High effort</tspan><tspan fill="#8b949e">  &lt;-/-&gt; to adjust (Custom: Low · Medium · High | Claude: Low..Max + Ultracode)</tspan></text>
 
     <line x1="34" y1="318" x2="946" y2="318" stroke="#21262d" stroke-width="1"/>
 
@@ -65,17 +65,17 @@
 
     <!-- Gemini 4 Argon Thought Block -->
     <rect x="40" y="353" width="900" height="54" rx="6" fill="#131820" stroke="#21262d" stroke-width="1"/>
-    <text x="52" y="372"><tspan fill="#79c0ff" font-weight="700">Gemini 4 Argon</tspan><tspan fill="#6e7681">  [agy/gemini-4-argon-high · includeThoughts=true · thinking_delta]</tspan></text>
+    <text x="52" y="372"><tspan fill="#79c0ff" font-weight="700">Gemini 4 Argon</tspan><tspan fill="#6e7681">  [agy/gemini-4-argon-high · effort=high · thinking_delta]</tspan></text>
     <text x="52" y="394" fill="#8b949e" font-style="italic">∴ Let me inspect the movement simulation tick loop and verify GrimAC reach constraints before patching...</text>
 
     <!-- DeepSeek V4.1 Flash 1017 Thought Block -->
     <rect x="40" y="415" width="900" height="54" rx="6" fill="#131820" stroke="#21262d" stroke-width="1"/>
-    <text x="52" y="434"><tspan fill="#3fb950" font-weight="700">DeepSeek V4.1 Flash 1017</tspan><tspan fill="#6e7681">  [cl/deepseek/deepseek-v4.1-flash-1017 · effort=max · thinking_delta]</tspan></text>
+    <text x="52" y="434"><tspan fill="#3fb950" font-weight="700">DeepSeek V4.1 Flash 1017</tspan><tspan fill="#6e7681">  [cl/deepseek/deepseek-v4.1-flash-1017 · effort=high · thinking_delta]</tspan></text>
     <text x="52" y="456" fill="#8b949e" font-style="italic">∴ Analyzing OAuth pool latency: Cline responded in 210ms; streaming reasoning tokens prior to tool call...</text>
 
     <!-- Kimi K3 Thought Block -->
     <rect x="40" y="477" width="900" height="54" rx="6" fill="#131820" stroke="#21262d" stroke-width="1"/>
-    <text x="52" y="496"><tspan fill="#d2a8ff" font-weight="700">Kimi K3</tspan><tspan fill="#6e7681">  [cl/moonshotai/kimi-k3 -&gt; cbai/kimi-k3 · effort=max · thinking_delta]</tspan></text>
+    <text x="52" y="496"><tspan fill="#d2a8ff" font-weight="700">Kimi K3</tspan><tspan fill="#6e7681">  [cl/moonshotai/kimi-k3 -&gt; cbai/kimi-k3 · effort=high · thinking_delta]</tspan></text>
     <text x="52" y="518" fill="#8b949e" font-style="italic">∴ Checking cross-file references and validating edge cases before executing the atomic edit...</text>
   </g>
 
@@ -85,28 +85,28 @@
 
   <g font-family="Consolas, 'SFMono-Regular', Menlo, monospace" font-size="12.2">
     <!-- Segment 1: Active Model -->
-    <text x="32" y="579"><tspan fill="#3fb950" font-weight="700">DeepSeek V4.1</tspan><tspan fill="#d97757" font-weight="600"> Max</tspan></text>
-    <line x1="162" y1="567" x2="162" y2="583" stroke="#484f58" stroke-width="1.2"/>
+    <text x="32" y="579"><tspan fill="#d97757" font-weight="700">Opus 5.5 </tspan><tspan fill="#eb5f57" font-weight="700">M</tspan><tspan fill="#fac35f" font-weight="700">a</tspan><tspan fill="#c882b4" font-weight="700">x</tspan><tspan fill="#af5fff" font-weight="700"> ⚡Ultracode</tspan></text>
+    <line x1="210" y1="567" x2="210" y2="583" stroke="#484f58" stroke-width="1.2"/>
 
     <!-- Segment 2: 7d Gauge (Continuous TrueColor Track) -->
-    <text x="172" y="579" fill="#8b949e">7d</text>
-    <rect x="193" y="573.5" width="46" height="3.2" rx="1.5" fill="#30363d"/>
-    <rect x="193" y="573.5" width="11" height="3.2" rx="1.5" fill="#3fb950"/>
-    <text x="247" y="579"><tspan fill="#3fb950" font-weight="600">15%</tspan><tspan fill="#8b949e"> 5d2h </tspan><tspan fill="#484f58">· </tspan><tspan fill="#79c0ff" font-weight="600">AGY </tspan><tspan fill="#d29922" font-weight="600">71%</tspan></text>
-    <line x1="406" y1="567" x2="406" y2="583" stroke="#484f58" stroke-width="1.2"/>
+    <text x="220" y="579" fill="#8b949e">7d</text>
+    <rect x="240" y="573.5" width="42" height="3.2" rx="1.5" fill="#30363d"/>
+    <rect x="240" y="573.5" width="10" height="3.2" rx="1.5" fill="#3fb950"/>
+    <text x="290" y="579"><tspan fill="#3fb950" font-weight="600">15%</tspan><tspan fill="#8b949e"> 5d2h </tspan><tspan fill="#484f58">· </tspan><tspan fill="#79c0ff" font-weight="600">AGY </tspan><tspan fill="#d29922" font-weight="600">71%</tspan></text>
+    <line x1="442" y1="567" x2="442" y2="583" stroke="#484f58" stroke-width="1.2"/>
 
     <!-- Segment 3: 5h Gauge (Continuous TrueColor Track) -->
-    <text x="416" y="579" fill="#8b949e">5h</text>
-    <rect x="437" y="573.5" width="32" height="3.2" rx="1.5" fill="#30363d"/>
-    <rect x="437" y="573.5" width="5" height="3.2" rx="1.5" fill="#3fb950"/>
-    <text x="477" y="579"><tspan fill="#3fb950" font-weight="600">1%</tspan><tspan fill="#8b949e"> 3h20m </tspan><tspan fill="#484f58">· </tspan><tspan fill="#79c0ff" font-weight="600">AGY </tspan><tspan fill="#3fb950" font-weight="600">3%</tspan></text>
-    <line x1="628" y1="567" x2="628" y2="583" stroke="#484f58" stroke-width="1.2"/>
+    <text x="452" y="579" fill="#8b949e">5h</text>
+    <rect x="472" y="573.5" width="30" height="3.2" rx="1.5" fill="#30363d"/>
+    <rect x="472" y="573.5" width="5" height="3.2" rx="1.5" fill="#3fb950"/>
+    <text x="510" y="579"><tspan fill="#3fb950" font-weight="600">1%</tspan><tspan fill="#8b949e"> 3h20m </tspan><tspan fill="#484f58">· </tspan><tspan fill="#79c0ff" font-weight="600">AGY </tspan><tspan fill="#3fb950" font-weight="600">3%</tspan></text>
+    <line x1="654" y1="567" x2="654" y2="583" stroke="#484f58" stroke-width="1.2"/>
 
     <!-- Segment 4: Prompt Cache Hit & TTL -->
-    <text x="638" y="579"><tspan fill="#8b949e">cache </tspan><tspan fill="#3fb950" font-weight="600">98.3%</tspan><tspan fill="#8b949e"> ttl </tspan><tspan fill="#3fb950" font-weight="600">60m</tspan></text>
-    <line x1="786" y1="567" x2="786" y2="583" stroke="#484f58" stroke-width="1.2"/>
+    <text x="664" y="579"><tspan fill="#8b949e">cache </tspan><tspan fill="#3fb950" font-weight="600">98.3%</tspan><tspan fill="#8b949e"> ttl </tspan><tspan fill="#3fb950" font-weight="600">60m</tspan></text>
+    <line x1="806" y1="567" x2="806" y2="583" stroke="#484f58" stroke-width="1.2"/>
 
     <!-- Segment 5: Context & Turns -->
-    <text x="796" y="579"><tspan fill="#8b949e">ctx </tspan><tspan fill="#d2a8ff" font-weight="600">127.3k (13%)</tspan><tspan fill="#8b949e"> 12t</tspan></text>
+    <text x="816" y="579"><tspan fill="#8b949e">ctx </tspan><tspan fill="#d2a8ff" font-weight="600">127.3k (13%)</tspan></text>
   </g>
 </svg>

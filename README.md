@@ -12,7 +12,7 @@ Switch between **Claude Opus 5.5 / Fable 5.1 / Sonnet 5.5 / Haiku 5.5**, **Gemin
 
 ## Highlights
 
-- **Native `/model` & `/effort` Controls**: Use `low`, `medium`, `high`, `xhigh`, and `max` effort across **Opus 5.5**, **Sonnet 5.5**, **Haiku 5.5**, **Gemini 4 Argon**, **DeepSeek V4.1 Flash 1017**, and **Kimi K3** (`behavesAs: claude-opus-5-5`).
+- **Native `/model`, `/effort` & `Ultracode`**: Full `low`, `medium`, `high`, `xhigh`, `max` + `ultracode` / `ultrathink` support on native Claude (`Opus 5.5`, `Sonnet 5.5`, `Haiku 5.5`, `Fable 5.1`), and `low`, `medium`, `high` (`maxEffortLevel: high`) on **Gemini 4 Argon**, **DeepSeek V4.1 Flash 1017**, and **Kimi K3** matching their upstream API specifications.
 - **Visible `Thought (∴)` Streaming**: Translates reasoning blocks (`thinking_delta`) and thinking budgets across Anthropic, OpenAI-compatible, and Google Antigravity (`agy`) endpoints.
 - **Priority OAuth Failover Pool**: Routes `DeepSeek V4.1 Flash 1017` and `Kimi K3` through `Cline` -> `CodeBuddy Intl` -> `KiloCode` with automatic fallback on rate limits.
 - **Dual Quota Statusline & `/usage`**: Real-time `5h` and `7d` quota tracking for both Anthropic OAuth and Google Antigravity (`AGY 5x`) in the bottom bar and `/usage`.
@@ -27,7 +27,7 @@ Switch between **Claude Opus 5.5 / Fable 5.1 / Sonnet 5.5 / Haiku 5.5**, **Gemin
 | `127.0.0.1:20129` | `smart-router.js` | Intercepts `/v1/messages`, maps `/model` & `/effort`, merges `Claude + AGY` `/api/oauth/usage`, forwards native Claude (`Opus 5.5`, `Sonnet 5.5`, `Haiku 5.5`, `Fable 5.1`) to `api.anthropic.com` and custom models to `:20128`. |
 | `127.0.0.1:20128` | `omniroute` | Manages OAuth pools (`agy`, `cline`, `codebuddy-intl`, `kilocode`) and SSE stream conversion. |
 | `SessionStart` | `session-start.js` | Boots `omniroute` and `smart-router.js` if offline and injects project memory only inside project directories. |
-| `UserPromptSubmit` | `prompt-guard.js` | Lightweight prompt guard hook before dispatching user turns. |
+| `UserPromptSubmit` | `prompt-guard.js` | Guards expired 1h prompt cache and activates `⚡Ultracode` / `✦Ultrathink` reasoning directives & statusline badges. |
 | `PreCompact` / `Stop` | `pre-compact.js` + `stop-autosave.js` | Saves active state before context compaction and on session stop. |
 
 ## Quickstart (Windows / Linux / macOS)

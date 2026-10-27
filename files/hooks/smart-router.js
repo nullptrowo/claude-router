@@ -102,21 +102,30 @@ function getConfiguredEffort(modelKey) {
   }
 }
 
-function extractEffort(body, modelKey, allowMax = false) {
+function isUltraActive() {
+  try {
+    if (fs.existsSync(STATE_FILE)) {
+      const st = JSON.parse(fs.readFileSync(STATE_FILE, 'utf8'));
+      if (st.ultraMode && Date.now() - (st.ultraTs || 0) < 600000) {
+        return true;
+      }
+    }
+  } catch {}
+  return false;
+}
+
+function extractEffort(body, modelKey) {
+  if (isUltraActive()) return 'high';
   let effort = (body.output_config?.effort || body.effort || body.reasoning_effort || '').toLowerCase();
   if (!effort && body.thinking?.budget_tokens) {
     const b = Number(body.thinking.budget_tokens);
-    effort = b >= 28000 && allowMax ? 'max' : b >= 20000 && allowMax ? 'xhigh' : b >= 14000 ? 'high' : b <= 4096 ? 'low' : 'medium';
+    effort = b >= 14000 ? 'high' : b <= 4096 ? 'low' : 'medium';
   }
   if (!effort) effort = getConfiguredEffort(modelKey);
 
-  if (effort === 'max') {
-    return allowMax ? 'max' : 'high';
-  }
-  if (effort === 'xhigh') {
-    return allowMax ? 'xhigh' : 'high';
-  }
-  if (effort === 'high') {
+  // Custom upstream APIs (Google Antigravity & OpenAI-compatible DeepSeek/Kimi pools)
+  // accept 'low' | 'medium' | 'high'. Map 'xhigh'/'max' safely to 'high'.
+  if (effort === 'max' || effort === 'xhigh' || effort === 'high') {
     return 'high';
   }
   if (effort === 'low') {
@@ -209,7 +218,12 @@ function forwardToAnthropic(req, res, bodyBuf) {
 
 function saveRouterState(modelKey, effort, providerModel) {
   try {
+    let prev = {};
+    if (fs.existsSync(STATE_FILE)) {
+      prev = JSON.parse(fs.readFileSync(STATE_FILE, 'utf8'));
+    }
     fs.writeFileSync(STATE_FILE, JSON.stringify({
+      ...prev,
       model: modelKey,
       effort,
       providerModel,
@@ -253,7 +267,6 @@ function convertSseToAnthropicJson(sseText, fallbackModel) {
 function forwardPoolToOmniRoute(req, res, baseBody, candidates, modelKey, effort, idx = 0) {
   const candidate = candidates[idx];
   const callerWantsStream = baseBody.stream === true;
-  // Cline ('cl/') requires upstream streaming on /v1/messages
   const forceUpstreamStream = !callerWantsStream && candidate.startsWith('cl/');
 
   const bodyObj = {
@@ -283,19 +296,20 @@ function forwardPoolToOmniRoute(req, res, baseBody, candidates, modelKey, effort
     headers
   }, (upRes) => {
     const status = upRes.statusCode || 500;
-    // Automatic failover on rate-limit (429), payment/quota (402), not-found (404), or server error (5xx)
     if (status !== 200 && idx + 1 < candidates.length) {
       upRes.resume();
       return forwardPoolToOmniRoute(req, res, baseBody, candidates, modelKey, effort, idx + 1);
     }
-
-    saveRouterState(modelKey, effort, candidate);
 
     if (forceUpstreamStream && status === 200) {
       const chunks = [];
       upRes.on('data', c => chunks.push(c));
       upRes.on('end', () => {
         const sseText = Buffer.concat(chunks).toString('utf8');
+        if (sseText.includes('event: error') && !sseText.includes('message_start') && idx + 1 < candidates.length) {
+          return forwardPoolToOmniRoute(req, res, baseBody, candidates, modelKey, effort, idx + 1);
+        }
+        saveRouterState(modelKey, effort, candidate);
         const jsonOut = Buffer.from(convertSseToAnthropicJson(sseText, candidate), 'utf8');
         res.writeHead(200, {
           'Content-Type': 'application/json',
@@ -306,6 +320,43 @@ function forwardPoolToOmniRoute(req, res, baseBody, candidates, modelKey, effort
       return;
     }
 
+    // For streaming responses when fallback candidates exist, peek until first non-ping SSE event
+    if (callerWantsStream && status === 200 && idx + 1 < candidates.length) {
+      let decided = false;
+      const preChunks = [];
+      upRes.on('data', (chunk) => {
+        if (decided) {
+          res.write(chunk);
+          return;
+        }
+        preChunks.push(chunk);
+        const text = Buffer.concat(preChunks).toString('utf8');
+        if (text.includes('message_start') || text.includes('content_block')) {
+          decided = true;
+          saveRouterState(modelKey, effort, candidate);
+          res.writeHead(200, upRes.headers);
+          for (const c of preChunks) res.write(c);
+          preChunks.length = 0;
+        } else if (text.includes('event: error') || text.includes('"type":"error"')) {
+          decided = true;
+          upRes.destroy();
+          forwardPoolToOmniRoute(req, res, baseBody, candidates, modelKey, effort, idx + 1);
+        }
+      });
+      upRes.on('end', () => {
+        if (!decided) {
+          if (idx + 1 < candidates.length) {
+            return forwardPoolToOmniRoute(req, res, baseBody, candidates, modelKey, effort, idx + 1);
+          }
+          res.writeHead(200, upRes.headers);
+          for (const c of preChunks) res.write(c);
+        }
+        if (!res.writableEnded) res.end();
+      });
+      return;
+    }
+
+    saveRouterState(modelKey, effort, candidate);
     res.writeHead(status, upRes.headers);
     upRes.pipe(res);
   });
@@ -368,7 +419,7 @@ const server = http.createServer((req, res) => {
         }
 
         if (isArgon) {
-          const effort = extractEffort(body, 'claude-argon-4', false);
+          const effort = extractEffort(body, 'claude-argon-4');
           const targetModel =
             effort === 'high' ? 'agy/gemini-4-argon-high' :
             effort === 'low' ? 'agy/gemini-4-argon-low' :
@@ -382,7 +433,7 @@ const server = http.createServer((req, res) => {
         }
 
         if (isDeepSeek) {
-          const effort = extractEffort(body, 'claude-deepseek-v4-1-flash-1017', true);
+          const effort = extractEffort(body, 'claude-deepseek-v4-1-flash-1017');
           const cleanBody = { ...body };
           delete cleanBody.context_management;
           cleanBody.thinking = { type: 'adaptive' };
@@ -400,7 +451,7 @@ const server = http.createServer((req, res) => {
         }
 
         if (isKimi) {
-          const effort = extractEffort(body, 'claude-kimi-k3', true);
+          const effort = extractEffort(body, 'claude-kimi-k3');
           const cleanBody = { ...body };
           delete cleanBody.context_management;
           cleanBody.thinking = { type: 'adaptive' };
@@ -429,32 +480,35 @@ const server = http.createServer((req, res) => {
 function syncClaudeJsonOnStartup() {
   try {
     const agy = readAgyQuota();
-    if (!agy) return;
     if (!fs.existsSync(CLAUDE_JSON_FILE)) return;
     const cfg = JSON.parse(fs.readFileSync(CLAUDE_JSON_FILE, 'utf8'));
     if (!cfg.cachedGrowthBookFeatures) cfg.cachedGrowthBookFeatures = {};
     const inc = cfg.cachedGrowthBookFeatures.tengu_usage_overage_included_models || ['Fable', 'Fable 5', 'Fable 5.1'];
     if (!inc.includes('Gemini 4 Argon')) inc.push('Gemini 4 Argon');
     cfg.cachedGrowthBookFeatures.tengu_usage_overage_included_models = inc;
+    cfg.cachedGrowthBookFeatures.tengu_workflows_enabled = true;
+    cfg.cachedGrowthBookFeatures.tengu_turtle_carbon = true;
 
-    if (!cfg.cachedUsageUtilization) {
-      cfg.cachedUsageUtilization = { utilization: {}, lastUpdated: Date.now() };
+    if (agy) {
+      if (!cfg.cachedUsageUtilization) {
+        cfg.cachedUsageUtilization = { utilization: {}, lastUpdated: Date.now() };
+      }
+      if (!cfg.cachedUsageUtilization.utilization) {
+        cfg.cachedUsageUtilization.utilization = {};
+      }
+      const u = cfg.cachedUsageUtilization.utilization;
+      if (!u.limits || typeof u.limits !== 'object') u.limits = {};
+      u.limits['Gemini 4 Argon'] = {
+        utilization: Math.round(agy.sevenDayUsed),
+        resets_at: agy.sevenDayReset
+      };
+      u.wattle_ember = {
+        label: 'Current session (Gemini 4 Argon)',
+        utilization: Math.round(agy.fiveHourUsed),
+        resets_at: agy.fiveHourReset
+      };
+      cfg.cachedUsageUtilization.lastUpdated = Date.now();
     }
-    if (!cfg.cachedUsageUtilization.utilization) {
-      cfg.cachedUsageUtilization.utilization = {};
-    }
-    const u = cfg.cachedUsageUtilization.utilization;
-    if (!u.limits || typeof u.limits !== 'object') u.limits = {};
-    u.limits['Gemini 4 Argon'] = {
-      utilization: Math.round(agy.sevenDayUsed),
-      resets_at: agy.sevenDayReset
-    };
-    u.wattle_ember = {
-      label: 'Current session (Gemini 4 Argon)',
-      utilization: Math.round(agy.fiveHourUsed),
-      resets_at: agy.fiveHourReset
-    };
-    cfg.cachedUsageUtilization.lastUpdated = Date.now();
     fs.writeFileSync(CLAUDE_JSON_FILE, JSON.stringify(cfg, null, 2));
   } catch {}
 }

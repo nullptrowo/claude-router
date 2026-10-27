@@ -7,27 +7,47 @@ const HOME = os.homedir();
 const CACHE_FILE = path.join(HOME, '.claude', 'live-usage-cache.json');
 const CREDS_FILE = path.join(HOME, '.claude', '.credentials.json');
 const SETTINGS_FILE = path.join(HOME, '.claude', 'settings.json');
+const STATE_FILE = path.join(HOME, '.claude', 'argon-state.json');
 const CLAUDE_JSON_FILE = path.join(HOME, '.claude.json');
 const OMNI_DB = path.join(HOME, '.omniroute', 'storage.sqlite');
 const CACHE_TTL_MS = 20000;
 
-// TrueColor ANSI helpers (Zero emojis, clean TUI palette)
+// TrueColor ANSI helpers (Zero emojis, official Claude Code TUI palette)
 const RST = '\x1b[0m';
 const BOLD = '\x1b[1m';
 const fg = (r, g, b) => `\x1b[38;2;${r};${g};${b}m`;
 
 const C = {
-  coral: fg(217, 119, 87),    // Claude native (#d97757)
-  blue: fg(121, 192, 255),    // Gemini Argon (#79c0ff)
-  green: fg(63, 185, 80),     // DeepSeek / Healthy (<50%) (#3fb950)
-  amber: fg(210, 153, 34),    // Warning (50-80%) (#d29922)
-  red: fg(248, 81, 73),       // Critical (>80%) (#f85149)
-  purple: fg(210, 168, 255),  // Kimi / Context (#d2a8ff)
-  white: fg(230, 237, 243),   // Primary value (#e6edf3)
-  muted: fg(139, 148, 158),   // Secondary label (#8b949e)
-  dim: fg(72, 79, 88),        // Separator | (#484f58)
-  track: fg(48, 54, 61)       // Empty bar track (#30363d)
+  coral: fg(217, 119, 87),      // Claude native (#d97757)
+  blue: fg(121, 192, 255),      // Gemini Argon (#79c0ff)
+  green: fg(63, 185, 80),       // DeepSeek / Healthy (<50%) (#3fb950)
+  amber: fg(210, 153, 34),      // Warning (50-80%) (#d29922)
+  red: fg(248, 81, 73),         // Critical (>80%) (#f85149)
+  purple: fg(210, 168, 255),    // Kimi / Context (#d2a8ff)
+  white: fg(230, 237, 243),     // Primary value (#e6edf3)
+  muted: fg(139, 148, 158),     // Secondary label (#8b949e)
+  dim: fg(72, 79, 88),          // Separator | (#484f58)
+  track: fg(48, 54, 61),        // Empty bar track (#30363d)
+  // Official Claude Code effort palette (from claude.exe vt[])
+  effLow: fg(250, 195, 95),     // warning (rgb 250,195,95)
+  effMed: fg(63, 185, 80),      // success (rgb 63,185,80)
+  effHigh: fg(106, 155, 204),   // permission (rgb 106,155,204)
+  effXHigh: fg(208, 180, 255),  // autoAccept-shimmer (#d0b4ff)
+  effUltra: fg(175, 95, 255),   // effortUltra (electric violet)
+  rbRed: fg(235, 95, 87),       // rainbow_red
+  rbYellow: fg(250, 195, 95),   // rainbow_yellow
+  rbViolet: fg(200, 130, 180)   // rainbow_violet
 };
+
+function formatEffortBadge(effort) {
+  if (effort === 'Max') {
+    return `${BOLD}${C.rbRed}M${C.rbYellow}a${C.rbViolet}x${RST}`;
+  }
+  if (effort === 'xHigh') return `${BOLD}${C.effXHigh}xHigh${RST}`;
+  if (effort === 'High') return `${C.effHigh}High${RST}`;
+  if (effort === 'Low') return `${C.effLow}Low${RST}`;
+  return `${C.effMed}Med${RST}`;
+}
 
 function pctColor(pct) {
   const n = Number(pct) || 0;
@@ -88,6 +108,9 @@ function syncClaudeJsonUsage(live, agy) {
       'Fable 5.1',
       'Gemini 4 Argon'
     ];
+    cfg.cachedGrowthBookFeatures.tengu_workflows_enabled = true;
+    cfg.cachedGrowthBookFeatures.tengu_turtle_carbon = true;
+
     if (!cfg.cachedUsageUtilization || !cfg.cachedUsageUtilization.utilization) return;
     const u = cfg.cachedUsageUtilization.utilization;
     if (live?.five_hour) u.five_hour = live.five_hour;
@@ -198,8 +221,17 @@ process.stdin.on('end', async () => {
     const isSonnet = rawModelId.includes('sonnet');
     const isHaiku = rawModelId.includes('haiku');
     const isFable = rawModelId.includes('fable');
+    const isCustomCapped = isArgon || isDeepSeek || isKimi;
 
-    let activeEffort = 'Med';
+    // 1. Read live session effort from Claude Code stdin (`data.effort.level`) first
+    //    so session-only `/effort max` updates immediately without relying on settings.json.
+    let effRaw = (
+      data.effort?.level ||
+      (typeof data.effort === 'string' ? data.effort : '') ||
+      process.env.CLAUDE_EFFORT ||
+      ''
+    ).toLowerCase();
+
     try {
       const s = JSON.parse(fs.readFileSync(SETTINGS_FILE, 'utf8'));
       const modelKey = isArgon ? 'claude-argon-4'
@@ -210,16 +242,37 @@ process.stdin.on('end', async () => {
                      : isHaiku ? 'claude-haiku-5-5'
                      : isFable ? 'claude-fable-5-1'
                      : data.model?.id;
-      const effRaw = (
-        (modelKey && s.modelSettings?.[modelKey]?.effortLevel) ||
-        s.effortLevel ||
-        'medium'
-      ).toLowerCase();
-      if (effRaw === 'max') activeEffort = 'Max';
-      else if (effRaw === 'xhigh') activeEffort = 'xHigh';
-      else if (effRaw === 'high') activeEffort = 'High';
-      else if (effRaw === 'low') activeEffort = 'Low';
-      else activeEffort = 'Med';
+      if (!effRaw) {
+        effRaw = (
+          (modelKey && s.modelSettings?.[modelKey]?.effortLevel) ||
+          s.effortLevel ||
+          'medium'
+        ).toLowerCase();
+      }
+    } catch {}
+
+    // Custom models (Argon, DeepSeek, Kimi) support Low / Med / High on their upstream APIs
+    if (isCustomCapped && (effRaw === 'max' || effRaw === 'xhigh')) {
+      effRaw = 'high';
+    }
+
+    let activeEffort = 'Med';
+    if (effRaw === 'max') activeEffort = 'Max';
+    else if (effRaw === 'xhigh') activeEffort = 'xHigh';
+    else if (effRaw === 'high') activeEffort = 'High';
+    else if (effRaw === 'low') activeEffort = 'Low';
+
+    // Check if ultracode / ultrathink was triggered
+    let ultraBadge = '';
+    try {
+      if (fs.existsSync(STATE_FILE)) {
+        const st = JSON.parse(fs.readFileSync(STATE_FILE, 'utf8'));
+        if (st.ultraMode && Date.now() - (st.ultraTs || 0) < 600000) {
+          ultraBadge = st.ultraMode === 'ultracode'
+            ? ` ${BOLD}${C.effUltra}⚡Ultracode${RST}`
+            : ` ${BOLD}${C.effUltra}✦Ultrathink${RST}`;
+        }
+      }
     } catch {}
 
     const modelColor = isArgon ? C.blue
@@ -236,11 +289,7 @@ process.stdin.on('end', async () => {
                     : isFable ? 'Fable 5.1'
                     : (data.model?.display_name || 'Claude');
 
-    const effColor = activeEffort === 'Max' || activeEffort === 'xHigh' ? C.coral
-                   : activeEffort === 'High' ? C.amber
-                   : C.muted;
-
-    const modelBadge = `${BOLD}${modelColor}${modelName}${RST} ${effColor}${activeEffort}${RST}`;
+    const modelBadge = `${BOLD}${modelColor}${modelName}${RST} ${formatEffortBadge(activeEffort)}${ultraBadge}`;
     const tp = data.transcript_path;
 
     const live = await fetchLiveOAuthUsage();
@@ -341,7 +390,7 @@ process.stdin.on('end', async () => {
     const activeCtx = ctxTokens || lastCtx;
     const activePctNum = ctxPct != null ? Number(ctxPct) : (activeCtx / ctxMax) * 100;
     const ctxCol = activePctNum >= 75 ? C.red : activePctNum >= 45 ? C.amber : C.purple;
-    parts.push(`${C.muted}ctx${RST} ${ctxCol}${fmtK(activeCtx)} (${ activePctNum.toFixed(0)}%)${RST} ${C.muted}${turns}t${RST}`);
+    parts.push(`${C.muted}ctx${RST} ${ctxCol}${fmtK(activeCtx)} (${activePctNum.toFixed(0)}%)${RST} ${C.muted}${turns}t${RST}`);
 
     process.stdout.write(parts.join(` ${C.dim}│${RST} `));
   } catch (e) {

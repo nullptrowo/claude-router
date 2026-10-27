@@ -3,6 +3,7 @@
     "ENABLE_PROMPT_CACHING_1H": "1",
     "ANTHROPIC_BASE_URL": "http://127.0.0.1:20129",
     "CLAUDE_CODE_ALWAYS_ENABLE_EFFORT": "1",
+    "CLAUDE_CODE_WORKFLOWS": "1",
     "DISABLE_TELEMETRY": "1",
     "CLAUDE_CODE_GB_DISK_CACHE_WHEN_TELEMETRY_OFF": "1"
   },
@@ -85,21 +86,23 @@
   "effortLevel": "medium",
   "modelSettings": {
     "claude-opus-5-5": {
-      "effortLevel": "low"
+      "effortLevel": "medium"
     },
     "claude-argon-4": {
       "effortLevel": "medium",
       "maxEffortLevel": "high"
     },
     "claude-deepseek-v4-1-flash-1017": {
-      "effortLevel": "medium",
-      "maxEffortLevel": "max"
+      "effortLevel": "high",
+      "maxEffortLevel": "high"
     },
     "claude-kimi-k3": {
       "effortLevel": "high",
-      "maxEffortLevel": "max"
+      "maxEffortLevel": "high"
     }
   },
+  "enableWorkflows": true,
+  "workflowKeywordTriggerEnabled": true,
   "autoCompactWindow": 240000,
   "autoUpdatesChannel": "latest",
   "tui": "fullscreen",
