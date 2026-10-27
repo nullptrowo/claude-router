@@ -134,6 +134,35 @@ function extractEffort(body, modelKey) {
   return 'medium';
 }
 
+function sanitizeCustomModelBody(cleanBody) {
+  delete cleanBody.context_management;
+  // Prevent Claude Code's internal QuickJS Workflow tool from being forced on custom models
+  // when Ultracode is active (avoids QuickJS compile errors and 10x parallel OAuth rate-limits)
+  if (Array.isArray(cleanBody.tools)) {
+    cleanBody.tools = cleanBody.tools.filter(t => t && t.name !== 'Workflow');
+  }
+  if (Array.isArray(cleanBody.messages)) {
+    cleanBody.messages = cleanBody.messages.map(msg => {
+      if (!msg || !Array.isArray(msg.content)) return msg;
+      return {
+        ...msg,
+        content: msg.content.map(block => {
+          if (block && block.type === 'text' && typeof block.text === 'string' && block.text.includes('Use the Workflow tool')) {
+            return {
+              ...block,
+              text: block.text.replace(
+                /Use the Workflow tool to fulfill the request\./g,
+                'Verify every assumption, edge case, and cross-file dependency thoroughly before finalizing.'
+              )
+            };
+          }
+          return block;
+        })
+      };
+    });
+  }
+}
+
 function ensureAuthHeaders(headers) {
   if (!headers['authorization'] && !headers['x-api-key']) {
     try {
@@ -425,7 +454,7 @@ const server = http.createServer((req, res) => {
             effort === 'low' ? 'agy/gemini-4-argon-low' :
             'agy/gemini-4-argon-medium';
           const cleanBody = { ...body };
-          delete cleanBody.context_management;
+          sanitizeCustomModelBody(cleanBody);
           cleanBody.includeThoughts = true;
           cleanBody.thinking = { type: 'adaptive' };
           cleanBody.output_config = { effort };
@@ -435,7 +464,7 @@ const server = http.createServer((req, res) => {
         if (isDeepSeek) {
           const effort = extractEffort(body, 'claude-deepseek-v4-1-flash-1017');
           const cleanBody = { ...body };
-          delete cleanBody.context_management;
+          sanitizeCustomModelBody(cleanBody);
           cleanBody.thinking = { type: 'adaptive' };
           cleanBody.output_config = { effort };
           cleanBody.effort = effort;
@@ -453,7 +482,7 @@ const server = http.createServer((req, res) => {
         if (isKimi) {
           const effort = extractEffort(body, 'claude-kimi-k3');
           const cleanBody = { ...body };
-          delete cleanBody.context_management;
+          sanitizeCustomModelBody(cleanBody);
           cleanBody.thinking = { type: 'adaptive' };
           cleanBody.output_config = { effort };
           cleanBody.effort = effort;
