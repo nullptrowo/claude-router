@@ -85,41 +85,28 @@
 
   <g font-family="Consolas, 'SFMono-Regular', Menlo, monospace" font-size="12.2">
     <!-- Segment 1: Active Model -->
-    <text x="32" y="579" fill="#3fb950" font-weight="700">DeepSeek V4.1 Flash 1017 (Max)</text>
-    <line x1="246" y1="567" x2="246" y2="583" stroke="#30363d" stroke-width="1.2"/>
+    <text x="32" y="579"><tspan fill="#3fb950" font-weight="700">DeepSeek V4.1</tspan><tspan fill="#d97757" font-weight="600"> Max</tspan></text>
+    <line x1="162" y1="567" x2="162" y2="583" stroke="#484f58" stroke-width="1.2"/>
 
-    <!-- Segment 2: 7d Bar (8 vector blocks aligned 1:1 with text cap-height) -->
-    <text x="256" y="579" fill="#c9d1d9" font-weight="600">7d</text>
-    <g transform="translate(276, 569)">
-      <rect x="0"  y="0" width="5.5" height="10.5" rx="1" fill="#c9d1d9"/>
-      <rect x="7"  y="0" width="5.5" height="10.5" rx="1" fill="#c9d1d9"/>
-      <rect x="14" y="0" width="5.5" height="10.5" rx="1" fill="#c9d1d9"/>
-      <rect x="21" y="0" width="5.5" height="10.5" rx="1" fill="#30363d"/>
-      <rect x="28" y="0" width="5.5" height="10.5" rx="1" fill="#30363d"/>
-      <rect x="35" y="0" width="5.5" height="10.5" rx="1" fill="#30363d"/>
-      <rect x="42" y="0" width="5.5" height="10.5" rx="1" fill="#30363d"/>
-      <rect x="49" y="0" width="5.5" height="10.5" rx="1" fill="#30363d"/>
-    </g>
-    <text x="338" y="579"><tspan fill="#c9d1d9" font-weight="600">38%</tspan><tspan fill="#79c0ff"> (AGY 14.2%/5.0%)</tspan><tspan fill="#8b949e"> 4d11h</tspan></text>
-    <line x1="524" y1="567" x2="524" y2="583" stroke="#30363d" stroke-width="1.2"/>
+    <!-- Segment 2: 7d Gauge (Continuous TrueColor Track) -->
+    <text x="174" y="579" fill="#8b949e">7d</text>
+    <rect x="195" y="573.5" width="48" height="3.2" rx="1.5" fill="#30363d"/>
+    <rect x="195" y="573.5" width="12" height="3.2" rx="1.5" fill="#3fb950"/>
+    <text x="251" y="579"><tspan fill="#3fb950" font-weight="600">15%</tspan><tspan fill="#8b949e"> 5d2h </tspan><tspan fill="#79c0ff" font-weight="600">AGY </tspan><tspan fill="#d29922" font-weight="600">71%</tspan><tspan fill="#484f58">/</tspan><tspan fill="#3fb950" font-weight="600">3%</tspan></text>
+    <line x1="422" y1="567" x2="422" y2="583" stroke="#484f58" stroke-width="1.2"/>
 
-    <!-- Segment 3: 5h Bar (5 vector blocks aligned 1:1 with text cap-height) -->
-    <text x="534" y="579" fill="#c9d1d9" font-weight="600">5h</text>
-    <g transform="translate(554, 569)">
-      <rect x="0"  y="0" width="5.5" height="10.5" rx="1" fill="#c9d1d9"/>
-      <rect x="7"  y="0" width="5.5" height="10.5" rx="1" fill="#30363d"/>
-      <rect x="14" y="0" width="5.5" height="10.5" rx="1" fill="#30363d"/>
-      <rect x="21" y="0" width="5.5" height="10.5" rx="1" fill="#30363d"/>
-      <rect x="28" y="0" width="5.5" height="10.5" rx="1" fill="#30363d"/>
-    </g>
-    <text x="595" y="579"><tspan fill="#c9d1d9" font-weight="600">19%</tspan><tspan fill="#8b949e"> 3h42m</tspan></text>
-    <line x1="667" y1="567" x2="667" y2="583" stroke="#30363d" stroke-width="1.2"/>
+    <!-- Segment 3: 5h Gauge (Continuous TrueColor Track) -->
+    <text x="434" y="579" fill="#8b949e">5h</text>
+    <rect x="455" y="573.5" width="34" height="3.2" rx="1.5" fill="#30363d"/>
+    <rect x="455" y="573.5" width="5" height="3.2" rx="1.5" fill="#3fb950"/>
+    <text x="497" y="579"><tspan fill="#3fb950" font-weight="600">1%</tspan><tspan fill="#8b949e"> 3h20m</tspan></text>
+    <line x1="566" y1="567" x2="566" y2="583" stroke="#484f58" stroke-width="1.2"/>
 
     <!-- Segment 4: Prompt Cache Hit & TTL -->
-    <text x="677" y="579" fill="#8b949e">hit:88.4% ttl:56m</text>
-    <line x1="802" y1="567" x2="802" y2="583" stroke="#30363d" stroke-width="1.2"/>
+    <text x="578" y="579"><tspan fill="#8b949e">cache </tspan><tspan fill="#3fb950" font-weight="600">98.3%</tspan><tspan fill="#8b949e"> ttl </tspan><tspan fill="#3fb950" font-weight="600">60m</tspan><tspan fill="#8b949e"> cr:80.0M out:483.1k</tspan></text>
+    <line x1="836" y1="567" x2="836" y2="583" stroke="#484f58" stroke-width="1.2"/>
 
     <!-- Segment 5: Context & Turns -->
-    <text x="812" y="579" fill="#d2a8ff" font-weight="600">ctx:142.0k(14%) 12t</text>
+    <text x="846" y="579"><tspan fill="#8b949e">ctx </tspan><tspan fill="#d2a8ff" font-weight="600">127.3k (13%)</tspan></text>
   </g>
 </svg>

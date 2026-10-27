@@ -11,6 +11,40 @@ const CLAUDE_JSON_FILE = path.join(HOME, '.claude.json');
 const OMNI_DB = path.join(HOME, '.omniroute', 'storage.sqlite');
 const CACHE_TTL_MS = 20000;
 
+// TrueColor ANSI helpers (Zero emojis, clean TUI palette)
+const RST = '\x1b[0m';
+const BOLD = '\x1b[1m';
+const fg = (r, g, b) => `\x1b[38;2;${r};${g};${b}m`;
+
+const C = {
+  coral: fg(217, 119, 87),    // Claude native (#d97757)
+  blue: fg(121, 192, 255),    // Gemini Argon (#79c0ff)
+  green: fg(63, 185, 80),     // DeepSeek / Healthy (<50%) (#3fb950)
+  amber: fg(210, 153, 34),    // Warning (50-80%) (#d29922)
+  red: fg(248, 81, 73),       // Critical (>80%) (#f85149)
+  purple: fg(210, 168, 255),  // Kimi / Context (#d2a8ff)
+  white: fg(230, 237, 243),   // Primary value (#e6edf3)
+  muted: fg(139, 148, 158),   // Secondary label (#8b949e)
+  dim: fg(72, 79, 88),        // Separator | (#484f58)
+  track: fg(48, 54, 61)       // Empty bar track (#30363d)
+};
+
+function pctColor(pct) {
+  const n = Number(pct) || 0;
+  if (n >= 80) return C.red;
+  if (n >= 50) return C.amber;
+  return C.green;
+}
+
+function makeGauge(pct, len = 7) {
+  if (pct == null || isNaN(pct)) return '';
+  const clamped = Math.max(0, Math.min(100, Number(pct)));
+  const filled = clamped > 0 ? Math.max(1, Math.round((clamped / 100) * len)) : 0;
+  const empty = Math.max(0, len - filled);
+  const col = pctColor(clamped);
+  return `${col}${'━'.repeat(filled)}${C.track}${'━'.repeat(empty)}${RST}`;
+}
+
 function readAgyQuota() {
   try {
     const { DatabaseSync } = require('node:sqlite');
@@ -30,10 +64,10 @@ function readAgyQuota() {
       const w = best.quotas.gemini_weekly;
       const s = best.quotas.gemini_session;
       return {
-        sevenDayUsed: +(100 - (w.remainingPercentage ?? 100)).toFixed(2),
+        sevenDayUsed: +(100 - (w.remainingPercentage ?? 100)).toFixed(1),
         sevenDayResetIso: w.resetAt || null,
         sevenDayResetEpoch: w.resetAt ? Math.floor(new Date(w.resetAt).getTime() / 1000) : null,
-        fiveHourUsed: s ? +(100 - (s.remainingPercentage ?? 100)).toFixed(2) : 0,
+        fiveHourUsed: s ? +(100 - (s.remainingPercentage ?? 100)).toFixed(1) : 0,
         fiveHourResetIso: s?.resetAt || null,
         fiveHourResetEpoch: s?.resetAt ? Math.floor(new Date(s.resetAt).getTime() / 1000) : null
       };
@@ -160,6 +194,10 @@ process.stdin.on('end', async () => {
     const isArgon = rawModelId.includes('argon');
     const isDeepSeek = rawModelId.includes('deepseek');
     const isKimi = rawModelId.includes('kimi');
+    const isOpus = rawModelId.includes('opus');
+    const isSonnet = rawModelId.includes('sonnet');
+    const isHaiku = rawModelId.includes('haiku');
+    const isFable = rawModelId.includes('fable');
 
     let activeEffort = 'Med';
     try {
@@ -167,8 +205,16 @@ process.stdin.on('end', async () => {
       const modelKey = isArgon ? 'claude-argon-4'
                      : isDeepSeek ? 'claude-deepseek-v4-1-flash-1017'
                      : isKimi ? 'claude-kimi-k3'
-                     : null;
-      const effRaw = ((modelKey && s.modelSettings?.[modelKey]?.effortLevel) || s.effortLevel || 'medium').toLowerCase();
+                     : isOpus ? 'claude-opus-5-5'
+                     : isSonnet ? 'claude-sonnet-5-5'
+                     : isHaiku ? 'claude-haiku-5-5'
+                     : isFable ? 'claude-fable-5-1'
+                     : data.model?.id;
+      const effRaw = (
+        (modelKey && s.modelSettings?.[modelKey]?.effortLevel) ||
+        s.effortLevel ||
+        'medium'
+      ).toLowerCase();
       if (effRaw === 'max') activeEffort = 'Max';
       else if (effRaw === 'xhigh') activeEffort = 'xHigh';
       else if (effRaw === 'high') activeEffort = 'High';
@@ -176,14 +222,25 @@ process.stdin.on('end', async () => {
       else activeEffort = 'Med';
     } catch {}
 
-    const model = isArgon ? `Argon ${activeEffort}`
-                : isDeepSeek ? `DeepSeek V4.1 Flash 1017 (${activeEffort})`
-                : isKimi ? `Kimi K3 (${activeEffort})`
-                : rawModelId.includes('opus') ? `Opus 5.5 (${activeEffort})`
-                : rawModelId.includes('sonnet') ? `Sonnet 5.5 (${activeEffort})`
-                : rawModelId.includes('haiku') ? `Haiku 5.5 (${activeEffort})`
-                : rawModelId.includes('fable') ? `Fable 5.1 (${activeEffort})`
-                : (data.model?.display_name || 'Claude');
+    const modelColor = isArgon ? C.blue
+                     : isDeepSeek ? C.green
+                     : isKimi ? C.purple
+                     : C.coral;
+
+    const modelName = isArgon ? 'Gemini 4 Argon'
+                    : isDeepSeek ? 'DeepSeek V4.1'
+                    : isKimi ? 'Kimi K3'
+                    : isOpus ? 'Opus 5.5'
+                    : isSonnet ? 'Sonnet 5.5'
+                    : isHaiku ? 'Haiku 5.5'
+                    : isFable ? 'Fable 5.1'
+                    : (data.model?.display_name || 'Claude');
+
+    const effColor = activeEffort === 'Max' || activeEffort === 'xHigh' ? C.coral
+                   : activeEffort === 'High' ? C.amber
+                   : C.muted;
+
+    const modelBadge = `${BOLD}${modelColor}${modelName}${RST} ${effColor}${activeEffort}${RST}`;
     const tp = data.transcript_path;
 
     const live = await fetchLiveOAuthUsage();
@@ -209,17 +266,11 @@ process.stdin.on('end', async () => {
       return `${m}m`;
     };
 
-    syncClaudeJsonUsage(live, agy, fmtTimeLeft);
-
-    const makeBar = (pct, len = 8) => {
-      if (pct == null || isNaN(pct)) return '';
-      const clamped = Math.max(0, Math.min(100, pct));
-      const filled = Math.round((clamped / 100) * len);
-      return '█'.repeat(filled) + '░'.repeat(len - filled);
-    };
+    syncClaudeJsonUsage(live, agy);
 
     const ctxPct = data.context_window?.used_percentage;
     const ctxTokens = data.context_window?.total_input_tokens || data.context_window?.current_usage?.input_tokens;
+    const ctxMax = data.context_window?.context_window_size || 1000000;
 
     let inTok = 0, outTok = 0, cacheWrite = 0, cacheRead = 0, turns = 0, lastCtx = 0, ttlLeftMin = 60;
     if (tp && fs.existsSync(tp)) {
@@ -252,39 +303,47 @@ process.stdin.on('end', async () => {
     }
 
     const fmtK = (n) => {
-      if (n >= 1_000_000) return (n / 1_000_000).toFixed(2) + 'M';
+      if (n >= 1_000_000) return (n / 1_000_000).toFixed(1) + 'M';
       if (n >= 1_000) return (n / 1_000).toFixed(1) + 'k';
       return String(n);
     };
 
     const totalInputAll = inTok + cacheWrite + cacheRead;
-    const cacheHitPct = totalInputAll > 0 ? ((cacheRead / totalInputAll) * 100).toFixed(1) : '0.0';
-    const ttlStr = ttlLeftMin > 0 ? `${ttlLeftMin}m` : 'EXPIRED';
+    const cacheHitNum = totalInputAll > 0 ? (cacheRead / totalInputAll) * 100 : 0;
+    const cacheHitPct = cacheHitNum.toFixed(1);
+    const hitColor = cacheHitNum >= 80 ? C.green : cacheHitNum >= 50 ? C.amber : C.muted;
+    const ttlStr = ttlLeftMin > 0 ? `${C.green}${ttlLeftMin}m${RST}` : `${C.muted}exp${RST}`;
 
-    const parts = [];
-    parts.push(model);
+    const parts = [modelBadge];
 
     if (isArgon && agy) {
-      const claudeNote = claude7d != null ? ` (Claude ${Math.round(Number(claude7d))}%)` : '';
-      const wStr = `7d ${makeBar(agy.sevenDayUsed, 8)} ${agy.sevenDayUsed.toFixed(1)}%${claudeNote}${agy.sevenDayResetEpoch ? ` ${fmtTimeLeft(agy.sevenDayResetEpoch)}` : ''}`;
-      const fStr = `5h ${makeBar(agy.fiveHourUsed, 5)} ${agy.fiveHourUsed.toFixed(1)}%${agy.fiveHourResetEpoch ? ` ${fmtTimeLeft(agy.fiveHourResetEpoch)}` : ''}`;
-      parts.push(wStr);
-      parts.push(fStr);
+      const c7 = claude7d != null ? ` ${C.muted}Claude ${Math.round(Number(claude7d))}%${RST}` : '';
+      const wTime = agy.sevenDayResetEpoch ? ` ${C.muted}${fmtTimeLeft(agy.sevenDayResetEpoch)}${RST}` : '';
+      const fTime = agy.fiveHourResetEpoch ? ` ${C.muted}${fmtTimeLeft(agy.fiveHourResetEpoch)}${RST}` : '';
+      parts.push(`${C.muted}7d${RST} ${makeGauge(agy.sevenDayUsed, 7)} ${pctColor(agy.sevenDayUsed)}${agy.sevenDayUsed.toFixed(0)}%${RST}${wTime}${c7}`);
+      parts.push(`${C.muted}5h${RST} ${makeGauge(agy.fiveHourUsed, 5)} ${pctColor(agy.fiveHourUsed)}${agy.fiveHourUsed.toFixed(0)}%${RST}${fTime}`);
     } else if (claude7d != null || claude5h != null) {
-      const agyNote = agy ? ` (AGY ${agy.sevenDayUsed.toFixed(1)}%/${agy.fiveHourUsed.toFixed(1)}%)` : '';
-      const wStr = claude7d != null ? `7d ${makeBar(claude7d, 8)} ${Math.round(Number(claude7d))}%${agyNote}${claude7dEpoch ? ` ${fmtTimeLeft(claude7dEpoch)}` : ''}` : '';
-      const fStr = claude5h != null ? `5h ${makeBar(claude5h, 5)} ${Math.round(Number(claude5h))}%${claude5hEpoch ? ` ${fmtTimeLeft(claude5hEpoch)}` : ''}` : '';
-      if (wStr) parts.push(wStr);
-      if (fStr) parts.push(fStr);
+      if (claude7d != null) {
+        const wTime = claude7dEpoch ? ` ${C.muted}${fmtTimeLeft(claude7dEpoch)}${RST}` : '';
+        const agyTag = agy
+          ? ` ${C.blue}AGY${RST} ${pctColor(agy.sevenDayUsed)}${agy.sevenDayUsed.toFixed(0)}%${RST}${C.dim}/${RST}${pctColor(agy.fiveHourUsed)}${agy.fiveHourUsed.toFixed(0)}%${RST}`
+          : '';
+        parts.push(`${C.muted}7d${RST} ${makeGauge(claude7d, 7)} ${pctColor(claude7d)}${Math.round(Number(claude7d))}%${RST}${wTime}${agyTag}`);
+      }
+      if (claude5h != null) {
+        const fTime = claude5hEpoch ? ` ${C.muted}${fmtTimeLeft(claude5hEpoch)}${RST}` : '';
+        parts.push(`${C.muted}5h${RST} ${makeGauge(claude5h, 5)} ${pctColor(claude5h)}${Math.round(Number(claude5h))}%${RST}${fTime}`);
+      }
     }
 
-    parts.push(`out:${fmtK(outTok)} cw:${fmtK(cacheWrite)} cr:${fmtK(cacheRead)} hit:${cacheHitPct}% ttl:${ttlStr}`);
+    parts.push(`${C.muted}cache${RST} ${hitColor}${cacheHitPct}%${RST} ${C.muted}ttl${RST} ${ttlStr} ${C.muted}cr:${fmtK(cacheRead)} out:${fmtK(outTok)}${RST}`);
 
     const activeCtx = ctxTokens || lastCtx;
-    const activePct = ctxPct != null ? `${Number(ctxPct).toFixed(0)}%` : `${Math.round((activeCtx / 1000000) * 100)}%`;
-    parts.push(`ctx:${fmtK(activeCtx)}(${activePct}) ${turns}t`);
+    const activePctNum = ctxPct != null ? Number(ctxPct) : (activeCtx / ctxMax) * 100;
+    const ctxCol = activePctNum >= 75 ? C.red : activePctNum >= 45 ? C.amber : C.purple;
+    parts.push(`${C.muted}ctx${RST} ${ctxCol}${fmtK(activeCtx)} (${ activePctNum.toFixed(0)}%)${RST} ${C.muted}${turns}t${RST}`);
 
-    process.stdout.write(parts.join(' | '));
+    process.stdout.write(parts.join(` ${C.dim}│${RST} `));
   } catch (e) {
     process.stdout.write('ready');
   }
