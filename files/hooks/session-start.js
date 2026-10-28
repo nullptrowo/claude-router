@@ -51,14 +51,25 @@ function spawnDetachedHidden(scriptPath, args = []) {
       : [scriptPath, ...args];
 
     if (process.platform === 'win32') {
-      const argStr = nodeArgs.map(a => `"${a}"`).join(' ');
-      const cmdLine = `"${process.execPath}" ${argStr}`;
-      execFileSync('powershell.exe', [
-        '-NoProfile',
-        '-WindowStyle', 'Hidden',
-        '-Command',
-        `$si = New-CimInstance -ClassName Win32_ProcessStartup -ClientOnly -Property @{ ShowWindow = [uint16]0 }; Invoke-CimMethod -ClassName Win32_Process -MethodName Create -Arguments @{ CommandLine = '${cmdLine.replace(/'/g, "''")}'; ProcessStartupInformation = $si } | Out-Null`
-      ], { stdio: 'ignore', timeout: 3000, windowsHide: true });
+      // Use wscript.exe (GUI subsystem) + WScript.Shell.Run(..., 0, False) so Windows 11
+      // Default Terminal (WindowsTerminal.exe) never pops up a visible console window.
+      const vbsPath = path.join(os.homedir(), '.claude', 'hooks', 'launch-hidden.vbs');
+      const vbsCode = 'Set sh = CreateObject("WScript.Shell")\r\n' +
+        'Dim args()\r\n' +
+        'ReDim args(WScript.Arguments.Count - 1)\r\n' +
+        'For i = 0 To WScript.Arguments.Count - 1\r\n' +
+        '  args(i) = """" & WScript.Arguments(i) & """"\r\n' +
+        'Next\r\n' +
+        'sh.Run Join(args, " "), 0, False\r\n';
+      if (!fs.existsSync(vbsPath)) {
+        fs.writeFileSync(vbsPath, vbsCode, 'utf8');
+      }
+      const child = spawn('wscript.exe', ['//B', '//Nologo', vbsPath, process.execPath, ...nodeArgs], {
+        detached: true,
+        stdio: 'ignore',
+        windowsHide: true
+      });
+      child.unref();
     } else {
       const child = spawn(process.execPath, nodeArgs, {
         detached: true,
