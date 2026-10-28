@@ -34,13 +34,13 @@
     <text x="315" y="147"><tspan fill="#d97757" font-weight="700">Opus 5.5</tspan><tspan fill="#8b949e"> · Best for everyday, complex tasks · 1M context</tspan></text>
 
     <text x="52" y="168" fill="#c9d1d9">3. Fable</text>
-    <text x="315" y="168"><tspan fill="#c9d1d9">Fable 5.1</tspan><tspan fill="#8b949e"> · Most capable for hardest and longest-running tasks</tspan></text>
+    <text x="315" y="168"><tspan fill="#c9d1d9">Fable 5.1</tspan><tspan fill="#8b949e"> · Most capable for hardest and longest-running tasks · 1M context</tspan></text>
 
     <text x="52" y="189" fill="#c9d1d9">4. Sonnet</text>
     <text x="315" y="189"><tspan fill="#c9d1d9">Sonnet 5.5</tspan><tspan fill="#8b949e"> · Efficient for routine tasks · 1M context</tspan></text>
 
     <text x="52" y="210" fill="#c9d1d9">5. Haiku</text>
-    <text x="315" y="210"><tspan fill="#c9d1d9">Haiku 5.5</tspan><tspan fill="#8b949e"> · Fastest for quick answers</tspan></text>
+    <text x="315" y="210"><tspan fill="#c9d1d9">Haiku 5.5</tspan><tspan fill="#8b949e"> · Fastest for quick answers · 1M context</tspan></text>
 
     <text x="52" y="231" fill="#c9d1d9">6. Gemini 4 Argon</text>
     <text x="315" y="231"><tspan fill="#79c0ff">Google Antigravity 5x</tspan><tspan fill="#8b949e"> · 1M context</tspan></text>
@@ -70,12 +70,12 @@
 
     <!-- DeepSeek V4.1 Flash 1017 Thought Block -->
     <rect x="40" y="415" width="900" height="54" rx="6" fill="#131820" stroke="#21262d" stroke-width="1"/>
-    <text x="52" y="434"><tspan fill="#3fb950" font-weight="700">DeepSeek V4.1 Flash 1017</tspan><tspan fill="#6e7681">  [cl/deepseek/deepseek-v4.1-flash-1017 · effort=high · thinking_delta]</tspan></text>
+    <text x="52" y="434"><tspan fill="#3fb950" font-weight="700">DeepSeek V4.1 Flash 1017</tspan><tspan fill="#6e7681">  [cbai/deepseek-v4.1-flash · effort=high · thinking_delta]</tspan></text>
     <text x="52" y="456" fill="#8b949e" font-style="italic">∴ Analyzing OAuth pool latency: Cline responded in 210ms; streaming reasoning tokens prior to tool call...</text>
 
     <!-- Kimi K3 Thought Block -->
     <rect x="40" y="477" width="900" height="54" rx="6" fill="#131820" stroke="#21262d" stroke-width="1"/>
-    <text x="52" y="496"><tspan fill="#d2a8ff" font-weight="700">Kimi K3</tspan><tspan fill="#6e7681">  [cl/moonshotai/kimi-k3 -&gt; cbai/kimi-k3 · effort=high · thinking_delta]</tspan></text>
+    <text x="52" y="496"><tspan fill="#d2a8ff" font-weight="700">Kimi K3</tspan><tspan fill="#6e7681">  [cbai/kimi-k3 -&gt; cl/moonshotai/kimi-k3 · effort=high · thinking_delta]</tspan></text>
     <text x="52" y="518" fill="#8b949e" font-style="italic">∴ Checking cross-file references and validating edge cases before executing the atomic edit...</text>
   </g>
 

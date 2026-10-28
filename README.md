@@ -19,7 +19,7 @@ Switch between **Claude Opus 5.5 / Fable 5.1 / Sonnet 5.5 / Haiku 5.5**, **Gemin
 | **Default (Opus 5.5)** | `opus` | Anthropic Native | `1M` | `low` · `med` · `high` · `xhigh` · `max` | Claude OAuth |
 | **Fable 5.1** | `fable` | Anthropic Native | `1M` | `low` · `med` · `high` · `xhigh` · `max` | Claude OAuth |
 | **Sonnet 5.5** | `sonnet` | Anthropic Native | `1M` | `low` · `med` · `high` · `xhigh` · `max` | Claude OAuth |
-| **Haiku 5.5** | `haiku` | Anthropic Native | `200k` | `low` · `med` · `high` | Claude OAuth |
+| **Haiku 5.5** | `haiku` | Anthropic Native | `1M` | `low` · `med` · `high` | Claude OAuth |
 | **Gemini 4 Argon** | `gemini` | Antigravity CLI (`agy`) | `1M` | `low` · `med` · `high` | AGY OAuth (`0%` Claude) |
 | **DeepSeek V4.1 Flash 1017** | `deepseek` | CodeBuddy → Cline → KiloCode | `1M` | `low` · `med` · `high` | Free OAuth Pool (`0%` Claude) |
 | **Kimi K3** | `kimi` | CodeBuddy → Cline → KiloCode | `1M` | `low` · `med` · `high` | Free OAuth Pool (`0%` Claude) |
@@ -103,7 +103,7 @@ Every model can spawn subagents on **any other model** (and set a custom `effort
 
 ### 4. Context Compaction (`/compact`) & Project Memory
 - **`/compact` & Auto-Compaction**:
-  - Works natively on all 7 models. The router estimates real input tokens on custom pools (`ctx 28.1k (3%)`) and allocates `16k+` output tokens at low latency during compaction so summaries never truncate.
+  - Works natively on all 7 models (`1M` `autoCompactWindow`). The router estimates real input tokens on custom pools (`ctx 28.1k (3%)`) and allocates `16k+` output tokens at low latency during compaction so summaries never truncate.
 - **Project-Scoped Memory**:
   - Before compaction (`PreCompact`) and when exiting a session (`Stop`), hooks save a snapshot of your active task inside `~/.claude/projects/<slug>/memory` and restore it on `SessionStart` when working inside a project directory (while keeping `$HOME` clean).
 
