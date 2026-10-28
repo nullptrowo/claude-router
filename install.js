@@ -6,16 +6,25 @@ const { execFileSync } = require('child_process');
 const HOME = os.homedir();
 const CLAUDE_DIR = path.join(HOME, '.claude');
 const HOOKS_DIR = path.join(CLAUDE_DIR, 'hooks');
+const AGENTS_DIR = path.join(CLAUDE_DIR, 'agents');
 const SRC_DIR = path.join(__dirname, 'files');
 
 fs.mkdirSync(HOOKS_DIR, { recursive: true });
+fs.mkdirSync(AGENTS_DIR, { recursive: true });
 
-// 1. Copy CLAUDE.md, statusline.js, and hooks/*.js
+// 1. Copy CLAUDE.md, statusline.js, hooks/*.js, and agents/*.md
 fs.copyFileSync(path.join(SRC_DIR, 'CLAUDE.md'), path.join(CLAUDE_DIR, 'CLAUDE.md'));
 fs.copyFileSync(path.join(SRC_DIR, 'statusline.js'), path.join(CLAUDE_DIR, 'statusline.js'));
 
 for (const h of ['smart-router.js', 'session-start.js', 'stop-autosave.js', 'pre-compact.js', 'prompt-guard.js']) {
   fs.copyFileSync(path.join(SRC_DIR, 'hooks', h), path.join(HOOKS_DIR, h));
+}
+
+const srcAgentsDir = path.join(SRC_DIR, 'agents');
+if (fs.existsSync(srcAgentsDir)) {
+  for (const a of fs.readdirSync(srcAgentsDir).filter(f => f.endsWith('.md'))) {
+    fs.copyFileSync(path.join(srcAgentsDir, a), path.join(AGENTS_DIR, a));
+  }
 }
 
 // 2. Generate settings.json with dynamic cross-platform paths

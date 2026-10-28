@@ -39,27 +39,37 @@ function getOmniRouteKey() {
 
 const OMNIROUTE_KEY = getOmniRouteKey();
 
-// Multi-provider priority pools (fastest latency & highest tok/s first)
+// Multi-provider priority pools (CodeBuddy 1M Pro first, mutual cross-backup, Cline, KiloCode)
 const POOLS = {
   deepseek: [
-    'cl/deepseek/deepseek-v4.1-flash-1017',
-    'cl/deepseek/deepseek-v4.1-flash',
     'cbai/deepseek-v4.1-flash',
-    'cl/deepseek/deepseek-v4-flash',
+    'cbai/kimi-k3',
+    'cl/deepseek/deepseek-v4.1-flash-1017',
     'kc/reflection/beam-free'
   ],
   kimi: [
-    'cl/moonshotai/kimi-k3',
     'cbai/kimi-k3',
+    'cbai/deepseek-v4.1-flash',
+    'cl/moonshotai/kimi-k3',
     'kc/reflection/beam-free'
   ]
 };
 
-// Round-robin counters and concurrency queues for parallel Workflow / Agent bursts
-const poolRotation = { deepseek: 0, kimi: 0 };
+// Smart health tracking + concurrency pacing for heavy multi-agent workflows
+const candidateCooldownUntil = new Map();
+
+function markCandidateFailure(candidate, status) {
+  const now = Date.now();
+  const ttlMs = status === 402 ? 600000 : (status === 429 || status === 503) ? 15000 : 8000;
+  candidateCooldownUntil.set(candidate, now + ttlMs);
+}
+
+function markCandidateSuccess(candidate) {
+  candidateCooldownUntil.delete(candidate);
+}
 
 class ConcurrencyLimiter {
-  constructor(maxConcurrent, staggerMs = 120) {
+  constructor(maxConcurrent, staggerMs = 250) {
     this.maxConcurrent = maxConcurrent;
     this.staggerMs = staggerMs;
     this.active = 0;
@@ -93,23 +103,23 @@ class ConcurrencyLimiter {
 }
 
 const LIMITERS = {
-  argon: new ConcurrencyLimiter(2, 180),
-  deepseek: new ConcurrencyLimiter(3, 120),
-  kimi: new ConcurrencyLimiter(3, 120)
+  argon: new ConcurrencyLimiter(2, 200),
+  deepseek: new ConcurrencyLimiter(2, 300),
+  kimi: new ConcurrencyLimiter(2, 300)
 };
 
 function getRotatedCandidates(poolName) {
   const base = POOLS[poolName];
-  if (!base || base.length <= 2) return base.slice();
-  const primaryCount = base.length - 1;
-  const offset = (poolRotation[poolName]++) % primaryCount;
-  if (offset === 0) return base.slice();
-  const rotated = [];
-  for (let i = 0; i < primaryCount; i++) {
-    rotated.push(base[(offset + i) % primaryCount]);
+  if (!base) return [];
+  const now = Date.now();
+  const healthy = [];
+  const cooling = [];
+  for (const c of base) {
+    const until = candidateCooldownUntil.get(c) || 0;
+    if (until > now) cooling.push(c);
+    else healthy.push(c);
   }
-  rotated.push(base[base.length - 1]);
-  return rotated;
+  return [...healthy, ...cooling];
 }
 
 function readAgyQuota() {
@@ -222,7 +232,7 @@ const WORKFLOW_DSL_SPEC = `
 3. Available global functions in script body:
    - \`phase(title)\`: switches active progress group (must match an entry in \`meta.phases\`).
    - \`log(message)\`: emits a live progress message to \`/workflows\`.
-   - \`await agent(prompt, { label?: string, phase?: string, schema?: object })\`: spawns a subagent inheriting the active session model. NEVER pass \`model\` or \`effort\` in opts. If \`schema\` (\`{ type: "object", properties: {...}, required: [...] }\`) is provided, returns the validated object; otherwise returns string.
+   - \`await agent(prompt, { label?: string, phase?: string, agentType?: string, effort?: string, schema?: object })\`: spawns a subagent. By default, omit \`agentType\`, \`model\`, and \`effort\` so the worker inherits the active session model. If the user explicitly asks to delegate a step to a specific model or effort, pass \`agentType: "deepseek" | "kimi" | "gemini" | "opus" | "fable" | "sonnet" | "haiku"\` and/or \`effort: "low" | "medium" | "high" | "xhigh" | "max"\` (NEVER pass \`model\` in opts — always use \`agentType\`). If \`schema\` (\`{ type: "object", properties: {...}, required: [...] }\`) is provided, returns the validated object; otherwise returns string.
    - \`await parallel([() => agent(...), () => agent(...)])\`: takes an array of ZERO-ARG FUNCTIONS (thunks \`() => Promise\`), NOT raw promises. Always \`.filter(Boolean)\` results.
    - \`await pipeline(items, item => agent(...), (prev, item) => agent(...))\`: streams items across stages without barrier.
 4. Keep fan-out between 2 and 4 subagents per workflow.`;
@@ -236,7 +246,7 @@ function adaptCustomModelBody(cleanBody, isOpenAiPool = false) {
     cleanBody.max_tokens = Math.max(Number(cleanBody.max_tokens) || 0, 16384);
   }
 
-  // 2. Adapt tools for native Workflow & Agent execution on non-Anthropic models
+  // 2. Adapt tools for native Workflow & Cross-Model Agent execution
   if (Array.isArray(cleanBody.tools)) {
     // On OpenAI pools (DeepSeek/Kimi), drop Anthropic's server-only `web_search_20250305` stub
     // when mixed with regular tools (matching claude-to-gemini.ts) so subagents use WebFetch/Bash/Read
@@ -260,8 +270,8 @@ function adaptCustomModelBody(cleanBody, isOpenAiPool = false) {
         return tool;
       }
 
-      // Strip `model` override from Agent/Task tool schema so subagents always inherit
-      // the active custom model instead of calling paid Claude Haiku/Sonnet
+      // Remove `model` override from Agent/Task tool schema so subagent_type's frontmatter model
+      // (or default session inheritance) is always respected, and allow full effort selection.
       if (tool.name === 'Agent' || tool.name === 'Task') {
         const cloned = JSON.parse(JSON.stringify(tool));
         if (cloned.input_schema?.properties) {
@@ -269,13 +279,13 @@ function adaptCustomModelBody(cleanBody, isOpenAiPool = false) {
           if (cloned.input_schema.properties.effort) {
             cloned.input_schema.properties.effort = {
               type: 'string',
-              enum: ['low', 'medium', 'high'],
-              description: 'Optional reasoning effort override (low, medium, high).'
+              enum: ['low', 'medium', 'high', 'xhigh', 'max'],
+              description: 'Optional reasoning effort override for this subagent (low, medium, high, xhigh, max).'
             };
           }
         }
         if (typeof cloned.description === 'string') {
-          cloned.description += '\nIMPORTANT: Omit the `model` parameter so the spawned agent natively inherits the active session model.';
+          cloned.description += '\nCROSS-MODEL DELEGATION: By default use `Explore`, `Plan`, or `general-purpose` so the subagent inherits your active session model. When the user explicitly asks to delegate to another model, set `subagent_type` to `deepseek`, `kimi`, `gemini`, `opus`, `fable`, `sonnet`, or `haiku` (and optionally set `effort`).';
         }
         return cloned;
       }
@@ -474,13 +484,60 @@ function patchSseChunkForClaude(chunkBuf, estimatedInputTokens) {
   return Buffer.from(text, 'utf8');
 }
 
-function forwardPoolToOmniRoute(req, res, baseBody, candidates, modelKey, effort, idx = 0, onComplete = null) {
+function sanitizeAnthropicPayload(body, rawBuf) {
+  if (!body || typeof body !== 'object') return rawBuf;
+  let modified = false;
+
+  // Strip non-Anthropic synthetic thinking blocks (missing cryptographic signature)
+  // so mid-session switches between DeepSeek/Kimi/Gemini and Opus/Sonnet/Haiku/Fable never 400
+  if (Array.isArray(body.messages)) {
+    body.messages = body.messages.map(msg => {
+      if (!msg || msg.role !== 'assistant' || !Array.isArray(msg.content)) return msg;
+      const hasUnsignedThinking = msg.content.some(
+        b => b && b.type === 'thinking' && (typeof b.signature !== 'string' || b.signature.length < 60)
+      );
+      if (!hasUnsignedThinking) return msg;
+      modified = true;
+      const filtered = msg.content.filter(
+        b => !(b && b.type === 'thinking' && (typeof b.signature !== 'string' || b.signature.length < 60))
+      );
+      return {
+        ...msg,
+        content: filtered.length > 0 ? filtered : [{ type: 'text', text: 'Done.' }]
+      };
+    });
+  }
+
+  return modified ? Buffer.from(JSON.stringify(body), 'utf8') : rawBuf;
+}
+
+function forwardPoolToOmniRoute(req, res, baseBody, candidates, modelKey, effort, idx = 0, onComplete = null, wave = 0) {
   const finish = () => {
     if (onComplete) {
       const cb = onComplete;
       onComplete = null;
       cb();
     }
+  };
+
+  const retryNextOrWave = (status) => {
+    markCandidateFailure(candidates[idx], status);
+    if (idx + 1 < candidates.length) {
+      return forwardPoolToOmniRoute(req, res, baseBody, candidates, modelKey, effort, idx + 1, finish, wave);
+    }
+    // If all candidates in the pool are temporarily rate-limited / cooling down (429/502/503/504)
+    // during a large workflow burst, pause with backoff and retry instead of failing the workflow
+    if (wave < 3 && (status === 429 || status === 502 || status === 503 || status === 504 || status === 0)) {
+      const delayMs = (wave + 1) * 2500;
+      return setTimeout(() => {
+        if (!res.writableEnded) {
+          forwardPoolToOmniRoute(req, res, baseBody, candidates, modelKey, effort, 0, finish, wave + 1);
+        } else {
+          finish();
+        }
+      }, delayMs);
+    }
+    return false;
   };
 
   const candidate = candidates[idx];
@@ -518,10 +575,12 @@ function forwardPoolToOmniRoute(req, res, baseBody, candidates, modelKey, effort
     headers
   }, (upRes) => {
     const status = upRes.statusCode || 500;
-    if (status !== 200 && idx + 1 < candidates.length) {
-      delegated = true;
-      upRes.resume();
-      return forwardPoolToOmniRoute(req, res, baseBody, candidates, modelKey, effort, idx + 1, finish);
+    if (status !== 200) {
+      if (retryNextOrWave(status) !== false) {
+        delegated = true;
+        upRes.resume();
+        return;
+      }
     }
 
     if (forceUpstreamStream && status === 200) {
@@ -530,10 +589,13 @@ function forwardPoolToOmniRoute(req, res, baseBody, candidates, modelKey, effort
       upRes.on('end', () => {
         if (delegated) return;
         const sseText = Buffer.concat(chunks).toString('utf8');
-        if (sseText.includes('event: error') && !sseText.includes('message_start') && idx + 1 < candidates.length) {
-          delegated = true;
-          return forwardPoolToOmniRoute(req, res, baseBody, candidates, modelKey, effort, idx + 1, finish);
+        if (sseText.includes('event: error') && !sseText.includes('message_start')) {
+          if (retryNextOrWave(503) !== false) {
+            delegated = true;
+            return;
+          }
         }
+        markCandidateSuccess(candidate);
         finish();
         saveRouterState(modelKey, effort, candidate);
         const jsonOut = Buffer.from(convertSseToAnthropicJson(sseText, candidate, estimatedInputTokens), 'utf8');
@@ -550,7 +612,7 @@ function forwardPoolToOmniRoute(req, res, baseBody, candidates, modelKey, effort
     }
 
     // For streaming responses when fallback candidates exist, peek until first non-ping SSE event
-    if (callerWantsStream && status === 200 && idx + 1 < candidates.length) {
+    if (callerWantsStream && status === 200 && (idx + 1 < candidates.length || wave < 3)) {
       let committed = false;
       const preChunks = [];
       upRes.on('data', (chunk) => {
@@ -563,6 +625,7 @@ function forwardPoolToOmniRoute(req, res, baseBody, candidates, modelKey, effort
         const text = Buffer.concat(preChunks).toString('utf8');
         if (text.includes('message_start') || text.includes('content_block')) {
           committed = true;
+          markCandidateSuccess(candidate);
           saveRouterState(modelKey, effort, candidate);
           if (!res.headersSent) res.writeHead(200, upRes.headers);
           if (!res.writableEnded) {
@@ -570,17 +633,18 @@ function forwardPoolToOmniRoute(req, res, baseBody, candidates, modelKey, effort
           }
           preChunks.length = 0;
         } else if (text.includes('event: error') || text.includes('"type":"error"')) {
-          delegated = true;
-          upRes.destroy();
-          forwardPoolToOmniRoute(req, res, baseBody, candidates, modelKey, effort, idx + 1, finish);
+          if (retryNextOrWave(503) !== false) {
+            delegated = true;
+            upRes.destroy();
+          }
         }
       });
       upRes.on('end', () => {
         if (delegated) return;
         if (!committed) {
-          if (idx + 1 < candidates.length) {
+          if (retryNextOrWave(503) !== false) {
             delegated = true;
-            return forwardPoolToOmniRoute(req, res, baseBody, candidates, modelKey, effort, idx + 1, finish);
+            return;
           }
           finish();
           if (!res.headersSent) res.writeHead(200, upRes.headers);
@@ -594,9 +658,9 @@ function forwardPoolToOmniRoute(req, res, baseBody, candidates, modelKey, effort
       });
       upRes.on('error', () => {
         if (delegated) return;
-        if (!committed && idx + 1 < candidates.length) {
+        if (!committed && retryNextOrWave(0) !== false) {
           delegated = true;
-          return forwardPoolToOmniRoute(req, res, baseBody, candidates, modelKey, effort, idx + 1, finish);
+          return;
         }
         finish();
         if (!res.writableEnded) res.end();
@@ -604,6 +668,7 @@ function forwardPoolToOmniRoute(req, res, baseBody, candidates, modelKey, effort
       return;
     }
 
+    if (status === 200) markCandidateSuccess(candidate);
     saveRouterState(modelKey, effort, candidate);
     if (!res.headersSent) res.writeHead(status, upRes.headers);
     upRes.on('data', (chunk) => {
@@ -623,9 +688,9 @@ function forwardPoolToOmniRoute(req, res, baseBody, candidates, modelKey, effort
 
   upstream.on('error', (err) => {
     if (delegated) return;
-    if (idx + 1 < candidates.length) {
+    if (retryNextOrWave(0) !== false) {
       delegated = true;
-      return forwardPoolToOmniRoute(req, res, baseBody, candidates, modelKey, effort, idx + 1, finish);
+      return;
     }
     finish();
     if (!res.headersSent) {
@@ -657,7 +722,7 @@ const server = http.createServer((req, res) => {
       try {
         body = JSON.parse(rawBuf.toString('utf8'));
       } catch {
-        return forwardToAnthropic(req, res, rawBuf);
+        return forwardToAnthropic(req, res, sanitizeAnthropicPayload(body, rawBuf));
       }
 
       const modelStr = String(body.model || '').toLowerCase();
@@ -750,7 +815,7 @@ const server = http.createServer((req, res) => {
         }
       }
 
-      return forwardToAnthropic(req, res, rawBuf);
+      return forwardToAnthropic(req, res, sanitizeAnthropicPayload(body, rawBuf));
     });
     return;
   }
