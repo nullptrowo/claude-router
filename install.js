@@ -16,7 +16,7 @@ fs.mkdirSync(AGENTS_DIR, { recursive: true });
 fs.copyFileSync(path.join(SRC_DIR, 'CLAUDE.md'), path.join(CLAUDE_DIR, 'CLAUDE.md'));
 fs.copyFileSync(path.join(SRC_DIR, 'statusline.js'), path.join(CLAUDE_DIR, 'statusline.js'));
 
-for (const h of ['smart-router.js', 'session-start.js', 'stop-autosave.js', 'pre-compact.js', 'prompt-guard.js']) {
+for (const h of ['smart-router.js', 'session-start.js', 'stop-autosave.js', 'pre-compact.js', 'prompt-guard.js', 'dns-fix.js']) {
   fs.copyFileSync(path.join(SRC_DIR, 'hooks', h), path.join(HOOKS_DIR, h));
 }
 
@@ -70,6 +70,20 @@ function patchOmniRouteThoughts() {
   }
   const distDir = path.join(omniDir, 'dist');
   if (fs.existsSync(distDir)) walk(distDir);
+
+  // Also inject dynamic DNS CNAME bridge (www.codebuddy.ai -> api.codebuddy.ai) into omniroute.mjs
+  const binPath = path.join(omniDir, 'bin', 'omniroute.mjs');
+  if (fs.existsSync(binPath)) {
+    try {
+      const binTxt = fs.readFileSync(binPath, 'utf8');
+      if (!binTxt.includes('api.codebuddy.ai')) {
+        const hookSnippet = `\nimport dns from "node:dns";\nconst _origLookup = dns.lookup.bind(dns);\ndns.lookup = (h, o, cb) => _origLookup((h === "www.codebuddy.ai" || h === "codebuddy.ai") ? "api.codebuddy.ai" : h, o, cb);\n`;
+        const updated = binTxt.replace('import { existsSync, readFileSync } from "node:fs";', 'import { existsSync, readFileSync } from "node:fs";' + hookSnippet);
+        fs.writeFileSync(binPath, updated, 'utf8');
+      }
+    } catch {}
+  }
+
   return patched;
 }
 

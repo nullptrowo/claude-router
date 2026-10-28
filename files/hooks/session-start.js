@@ -45,8 +45,13 @@ function findOmniRouteBin() {
 
 function spawnDetachedHidden(scriptPath, args = []) {
   try {
+    const dnsFix = path.join(os.homedir(), '.claude', 'hooks', 'dns-fix.js');
+    const nodeArgs = fs.existsSync(dnsFix)
+      ? ['--require', dnsFix, scriptPath, ...args]
+      : [scriptPath, ...args];
+
     if (process.platform === 'win32') {
-      const argStr = [scriptPath, ...args].map(a => `"${a}"`).join(' ');
+      const argStr = nodeArgs.map(a => `"${a}"`).join(' ');
       const cmdLine = `"${process.execPath}" ${argStr}`;
       execFileSync('powershell.exe', [
         '-NoProfile',
@@ -55,7 +60,7 @@ function spawnDetachedHidden(scriptPath, args = []) {
         `$si = New-CimInstance -ClassName Win32_ProcessStartup -ClientOnly -Property @{ ShowWindow = [uint16]0 }; Invoke-CimMethod -ClassName Win32_Process -MethodName Create -Arguments @{ CommandLine = '${cmdLine.replace(/'/g, "''")}'; ProcessStartupInformation = $si } | Out-Null`
       ], { stdio: 'ignore', timeout: 3000, windowsHide: true });
     } else {
-      const child = spawn(process.execPath, [scriptPath, ...args], {
+      const child = spawn(process.execPath, nodeArgs, {
         detached: true,
         stdio: 'ignore'
       });
