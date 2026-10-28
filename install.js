@@ -96,4 +96,5 @@ if (patchedChunks > 0) {
 console.log('✓ Next steps on a new PC:');
 console.log('  1. npm install -g omniroute');
 console.log('  2. node connect-oauth-pool.js   (connects Cline + CodeBuddy Intl)');
-console.log('  3. Run: claude');
+console.log('  3. (Optional) In http://127.0.0.1:20128 connect "Antigravity CLI" (agy) for Gemini 4 Argon');
+console.log('  4. Run: claude');

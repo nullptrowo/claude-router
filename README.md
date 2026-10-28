@@ -20,7 +20,7 @@ Switch between **Claude Opus 5.5 / Fable 5.1 / Sonnet 5.5 / Haiku 5.5**, **Gemin
 | **Fable 5.1** | `fable` | Anthropic Native | `1M` | `low` · `med` · `high` · `xhigh` · `max` | Claude OAuth |
 | **Sonnet 5.5** | `sonnet` | Anthropic Native | `1M` | `low` · `med` · `high` · `xhigh` · `max` | Claude OAuth |
 | **Haiku 5.5** | `haiku` | Anthropic Native | `200k` | `low` · `med` · `high` | Claude OAuth |
-| **Gemini 4 Argon** | `gemini` | Google Antigravity (`agy`) | `1M` | `low` · `med` · `high` | AGY OAuth (`0%` Claude) |
+| **Gemini 4 Argon** | `gemini` | Antigravity CLI (`agy`) | `1M` | `low` · `med` · `high` | AGY OAuth (`0%` Claude) |
 | **DeepSeek V4.1 Flash 1017** | `deepseek` | CodeBuddy → Cline → KiloCode | `1M` | `low` · `med` · `high` | Free OAuth Pool (`0%` Claude) |
 | **Kimi K3** | `kimi` | CodeBuddy → Cline → KiloCode | `1M` | `low` · `med` · `high` | Free OAuth Pool (`0%` Claude) |
 
@@ -61,7 +61,7 @@ node install.js
    ```
    Open the printed login URLs in your browser to authorize.
 3. *(Optional)* Open `http://127.0.0.1:20128` in your browser to connect:
-   - **Antigravity (`agy`)** → unlocks **Gemini 4 Argon** and the live `AGY` quota bar.
+   - **Antigravity CLI (`agy`)** → unlocks **Gemini 4 Argon** and the live `AGY` quota bar *(select **Antigravity CLI (`agy`)**, not the legacy `Antigravity` card, as only the CLI profile advertises `gemini-4-argon-*` in the live catalog)*.
    - **KiloCode (`kilocode`)** → adds backup failover capacity to the free pool.
 4. Launch Claude Code:
    ```bash
